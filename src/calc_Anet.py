@@ -7,8 +7,8 @@ CHAMBER_VOLUME_LITERS = 1.2
 LEAF_AREA_CM2 = 100.0
 WINDOW_SIZE = 6
 
-SEA_LEVEL_PRESSURE_PA = 101325
-R = 8.314  # J/mol/K
+PRESSURE = 101325 # Pa
+R = 8.314  # J mol K-1
 
 def ppm_to_umol_s(delta_ppm_s, volume_liters, temp_K, pressure_pa):
     volume_m3 = volume_liters / 1000.0
@@ -33,7 +33,7 @@ def main():
 
     try:
         while True:
-            if sensor.read_measurement():  # crucial: only read values if fresh data available
+            if sensor.read_measurement():
                 co2 = sensor.get_co2()
                 temp = sensor.get_temperature()
                 rh = sensor.get_humidity()
@@ -50,20 +50,19 @@ def main():
                     slope, _ = np.polyfit(times - times[0], co2s, 1)  # ppm/s
 
                     temp_K = temp + 273.15
-                    mol_flux = ppm_to_umol_s(slope, CHAMBER_VOLUME_LITERS, temp_K, SEA_LEVEL_PRESSURE_PA)
+                    mol_flux = ppm_to_umol_s(slope, CHAMBER_VOLUME_LITERS, temp_K, PRESSURE_)
                     leaf_area_m2 = LEAF_AREA_CM2 / 10000.0
                     A_net = -mol_flux / leaf_area_m2
 
-                    print(f"→ ΔCO2: {slope:+.3f} ppm/s | Anet: {A_net:+.2f} μmol m⁻² s⁻¹")
+                    print(f" delta_CO2: {slope:+.3f} ppm/s | Anet: {A_net:+.2f} μmol m-2 s-1")
                     print("-" * 40)
             else:
                 print(".", end="")  # waiting for new data
 
-            time.sleep(0.5)  # poll frequently
+            time.sleep(0.5)
 
     except KeyboardInterrupt:
         print("\nStopping measurements.")
 
 if __name__ == "__main__":
     main()
-
