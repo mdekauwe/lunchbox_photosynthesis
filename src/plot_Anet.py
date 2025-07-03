@@ -24,8 +24,7 @@ def setup_plot():
     fig, ax = plt.subplots()
     line, = ax.plot([], [], 'g-')
     ax.set_xlabel("Time (min)")
-    ax.set_ylabel("Net Photosynthesis (μmol m⁻² s⁻¹)")
-    ax.set_title("Real-time Net Photosynthesis")
+    ax.set_ylabel("Net Photosynthesis (μmol m$^{-2}$ s$^{-1}$)")
     ax.grid(True)
     return fig, ax, line
 
