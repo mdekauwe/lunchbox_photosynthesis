@@ -50,7 +50,7 @@ def main():
                     slope, _ = np.polyfit(times - times[0], co2s, 1)  # ppm/s
 
                     temp_K = temp + 273.15
-                    mol_flux = ppm_to_umol_s(slope, CHAMBER_VOLUME_LITERS, temp_K, PRESSURE_)
+                    mol_flux = ppm_to_umol_s(slope, CHAMBER_VOLUME_LITERS, temp_K, PRESSURE)
                     leaf_area_m2 = LEAF_AREA_CM2 / 10000.0
                     A_net = -mol_flux / leaf_area_m2
 
