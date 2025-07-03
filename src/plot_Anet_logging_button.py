@@ -9,7 +9,7 @@ from matplotlib.widgets import TextBox
 from scipy.stats import linregress
 
 
-def main(chamber_volume_liters, window_size, plot_window, pressure_pa,
+def main(chamber_volume, window_size, plot_window, pressure_pa,
          zero_run_duration, leaf_area_cm2_init):
 
     leaf_area_cm2 = [leaf_area_cm2_init]  # mutable for GUI text box updates
@@ -34,7 +34,8 @@ def main(chamber_volume_liters, window_size, plot_window, pressure_pa,
         return
 
     # Zero-run calibration phase
-    print(f"Starting zero-run calibration for {zero_run_duration} seconds. Ensure chamber is empty.")
+    print(f"Starting zero-run calibration for {zero_run_duration} seconds.\n
+            Ensure chamber is empty.")
     zero_co2_window = deque(maxlen=window_size)
     zero_time_window = deque(maxlen=window_size)
     zero_start = time.time()
@@ -76,12 +77,12 @@ def main(chamber_volume_liters, window_size, plot_window, pressure_pa,
 
     ax.set_xlabel("Time (min)")
     ax.set_ylabel("Net Photosynthesis (μmol m⁻² s⁻¹)")
-    ax.set_title("Real-time Net Photosynthesis")
     ax.grid(True)
     ax.legend()
 
     ax_text = plt.axes([0.1, 0.02, 0.3, 0.05])
-    text_box = TextBox(ax_text, "Leaf Area (cm²)", initial=str(leaf_area_cm2[0]))
+    text_box = TextBox(ax_text, "Leaf Area (cm²)",
+                       initial=str(leaf_area_cm2[0]))
     text_box.on_submit(update_leaf_area)
 
     try:
@@ -113,9 +114,12 @@ def main(chamber_volume_liters, window_size, plot_window, pressure_pa,
 
                     temp_K = temp + 273.15
 
-                    mol_flux = ppm_to_umol_s(corrected_slope, chamber_volume_liters, temp_K, pressure_pa)
-                    mol_flux_upper = ppm_to_umol_s(slope_upper, chamber_volume_liters, temp_K, pressure_pa)
-                    mol_flux_lower = ppm_to_umol_s(slope_lower, chamber_volume_liters, temp_K, pressure_pa)
+                    mol_flux = ppm_to_umol_s(corrected_slope, chamber_volume,
+                                             temp_K, pressure_pa)
+                    mol_flux_upper = ppm_to_umol_s(slope_upper, chamber_volume,
+                                                   temp_K, pressure_pa)
+                    mol_flux_lower = ppm_to_umol_s(slope_lower, chamber_volume,
+                                                   temp_K, pressure_pa)
 
                     leaf_area_m2 = leaf_area_cm2[0] / 10000.0
 
@@ -123,8 +127,8 @@ def main(chamber_volume_liters, window_size, plot_window, pressure_pa,
                     A_net_upper = -mol_flux_upper / leaf_area_m2
                     A_net_lower = -mol_flux_lower / leaf_area_m2
 
-                    print(f"CO₂ (dry): {co2_dry:.1f} ppm | Temp: {temp:.1f} °C | RH: {rh:.1f}%")
-                    print(f"ΔCO₂ slope (corrected): {corrected_slope:+.4f} ppm/s (± {1.96*stderr:.4f}) | A_net: {A_net:+.2f} μmol m⁻² s⁻¹")
+                    print(f"CO₂: {co2_dry:.1f} ppm | Temp: {temp:.1f} °C | RH: {rh:.1f}%")
+                    print(f"ΔCO₂ slope: {corrected_slope:+.4f} ppm/s (± {1.96*stderr:.4f}) | A_net: {A_net:+.2f} μmol m⁻² s⁻¹")
                     print("-" * 40)
 
                     anet_times.append(now)
@@ -150,7 +154,7 @@ def main(chamber_volume_liters, window_size, plot_window, pressure_pa,
                         ci_fill = ax.fill_between(times_rel,
                                                   list(anet_lower),
                                                   list(anet_upper),
-                                                  color='green', alpha=0.3,
+                                                  color='seagreen', alpha=0.3,
                                                   label="95% CI")
                         ax.legend()
                         ci_filled_once = True
@@ -158,11 +162,10 @@ def main(chamber_volume_liters, window_size, plot_window, pressure_pa,
                         ci_fill = ax.fill_between(times_rel,
                                                   list(anet_lower),
                                                   list(anet_upper),
-                                                  color='green', alpha=0.3)
+                                                  color='seagreen', alpha=0.3)
 
                     ax.relim()
                     ax.autoscale_view()
-                    ax.set_title(f"Net Photosynthesis (Leaf Area = {leaf_area_cm2[0]:.1f} cm²)")
                     plt.draw()
             else:
                 time.sleep(0.1)
@@ -190,8 +193,10 @@ if __name__ == "__main__":
     parser.add_argument('--leaf_area', type=float,
                         help='Initial leaf area in cm^2')
     args = parser.parse_args()
-    la_init = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 100.0
-
+    if args.leaf_area and args.leaf_area > 0:
+        la_init = args.leaf_area
+    else:
+        la_init = 100.0
 
     chamber_volume = 1.2  # litres
     window_size = 6
@@ -199,5 +204,5 @@ if __name__ == "__main__":
     pressure_pa = 101325  # Pa
     zero_run_duration = 30  # seconds
 
-    main(chamber_volume, window_size, plot_window, pressure_pa, zero_run_duration,
-         la_init)
+    main(chamber_volume, window_size, plot_window, pressure_pa,
+         zero_run_duration, la_init)
