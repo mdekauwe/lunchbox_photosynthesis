@@ -3,9 +3,9 @@ import qwiic_scd4x
 import numpy as np
 from collections import deque
 import matplotlib.pyplot as plt
+import csv
 
-
-def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
+def main(box_volume, leaf_area_cm2, window_size, ofname, override_temp=False,
          override_temp_c=23.0):
 
     DEG_2_K = 273.15
@@ -23,6 +23,7 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
     time_window = deque(maxlen=window_size)
 
     print("Starting measurements...")
+    write_header = True
 
     try:
         while True:
@@ -63,6 +64,13 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
                     )
                     print("-" * 40)
 
+                    with open(ofname, "a", newline="") as f:
+                        writer = csv.writer(f)
+                        if write_header:
+                            writer.writerow(["time", "co2", "temp", "rh", "vpd",
+                                             "a_net"])
+                            write_header = False  # Prevent writing header again
+                        writer.writerow([now, co2, temp, rh, vpd, a_net])
             else:
                 print(".", end="", flush=True)
 
@@ -90,5 +98,5 @@ if __name__ == "__main__":
     box_volume = 1.2 # litres
     leaf_area_cm2 = 100.0
     window_size = 20
-
-    main(box_volume, leaf_area_cm2, window_size, override_temp=False)
+    ofname = "..outputs/photosynthesis_log.csv"
+    main(box_volume, leaf_area_cm2, window_size, ofname, override_temp=False)
