@@ -32,6 +32,7 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
                 if override_temp: # debugging - take out at some pt...
                     temp = override_temp_c
                 rh = sensor.get_humidity()
+                vpd = calc_vpd(temp, rh)
                 now = time.time()
 
                 co2_window.append(co2)
@@ -39,7 +40,7 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
 
                 print(
                     f"CO₂: {co2:.2f} ppm | Temp: {temp:.1f} °C | "
-                    f"RH: {rh:.1f}%"
+                    f"RH: {rh:.1f}% | VPD: {vpd:.1f} kPa"
                 )
 
                 if len(co2_window) >= 3:
@@ -51,8 +52,9 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
                     an_leaf = calc_anet(slope, box_volume, temp_k)
                     a_net = -an_leaf / leaf_area_m2 # umol m-2 s-1
 
+
                     print(
-                        f"ΔCO₂: {slope:+.3f} ppm/s | "
+                        f"ΔCO₂: {slope:+.3f} ppm s$^{-1}$ | "
                         f"A_net: {a_net:+.2f} μmol m⁻² s⁻¹"
                     )
                     print("-" * 40)
@@ -73,6 +75,11 @@ def calc_anet(delta_ppm_s, box_volume, temp_k):
 
     return an_leaf # umol leaf-1 s-1
 
+def calc_vpd(temp_c, rh_percent):
+    es = 0.6108 * np.exp((17.27 * temp_c) / (temp_c + 237.3))  # kPa
+    ea = es * (rh_percent / 100.0)
+
+    return es - ea  # kPa
 
 if __name__ == "__main__":
 
