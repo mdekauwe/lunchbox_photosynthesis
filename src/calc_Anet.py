@@ -5,21 +5,20 @@ from collections import deque
 import matplotlib.pyplot as plt
 
 
-CHAMBER_VOLUME_LITERS = 1.2
-LEAF_AREA_CM2 = 100.0
-WINDOW_SIZE = 6
-
-PRESSURE = 101325 # Pa
-R = 8.314  # J mol K-1
-
-def ppm_to_umol_s(delta_ppm_s, volume_liters, temp_K, pressure_pa):
+def ppm_to_umol_s(delta_ppm_s, volume_liters, temp_k,
+                  pressure_pa, gas_constant):
     volume_m3 = volume_liters / 1000.0
-    mol_flux = (delta_ppm_s * pressure_pa * volume_m3) / (R * temp_K)
+    mol_flux = (delta_ppm_s * pressure_pa * volume_m3) / (
+        gas_constant * temp_k
+    )
     return mol_flux
 
-def main():
-    sensor = qwiic_scd4x.QwiicSCD4x()
 
+def main(chamber_volume_liters, leaf_area_cm2, window_size):
+    pressure_pa = 101325
+    gas_constant = 8.314
+
+    sensor = qwiic_scd4x.QwiicSCD4x()
     if not sensor.is_connected():
         print("Sensor not connected")
         return
@@ -28,8 +27,8 @@ def main():
         print("Error while initializing sensor")
         return
 
-    co2_window = deque(maxlen=WINDOW_SIZE)
-    time_window = deque(maxlen=WINDOW_SIZE)
+    co2_window = deque(maxlen=window_size)
+    time_window = deque(maxlen=window_size)
 
     print("Starting measurements...")
 
@@ -44,27 +43,49 @@ def main():
                 co2_window.append(co2)
                 time_window.append(now)
 
-                print(f"CO2: {co2:.1f} ppm | Temp: {temp:.1f} degC | RH: {rh:.1f}%")
+                print(
+                    f"CO₂: {co2:.1f} ppm | Temp: {temp:.1f} °C | "
+                    f"RH: {rh:.1f}%"
+                )
 
                 if len(co2_window) >= 3:
                     times = np.array(time_window)
                     co2s = np.array(co2_window)
-                    slope, _ = np.polyfit(times - times[0], co2s, 1)  # ppm/s
+                    slope, _ = np.polyfit(
+                        times - times[0], co2s, 1
+                    )  # ppm/s
 
-                    temp_K = temp + 273.15
-                    mol_flux = ppm_to_umol_s(slope, CHAMBER_VOLUME_LITERS, temp_K, PRESSURE)
-                    leaf_area_m2 = LEAF_AREA_CM2 / 10000.0
-                    A_net = -mol_flux / leaf_area_m2
+                    temp_k = temp + 273.15
+                    leaf_area_m2 = leaf_area_cm2 / 10000.0
 
-                    print(f" delta_CO2: {slope:+.3f} ppm/s | Anet: {A_net:+.2f} μmol m-2 s-1")
+                    mol_flux = ppm_to_umol_s(
+                        slope,
+                        chamber_volume_liters,
+                        temp_k,
+                        pressure_pa,
+                        gas_constant
+                    )
+
+                    a_net = -mol_flux / leaf_area_m2
+
+                    print(
+                        f"ΔCO₂: {slope:+.3f} ppm/s | "
+                        f"A_net: {a_net:+.2f} μmol m⁻² s⁻¹"
+                    )
                     print("-" * 40)
+
             else:
-                print(".", end="")  # waiting for new data
+                print(".", end="", flush=True)
 
             time.sleep(0.5)
 
     except KeyboardInterrupt:
         print("\nStopping measurements.")
 
+
 if __name__ == "__main__":
-    main()
+    chamber_volume_liters = 1.2
+    leaf_area_cm2 = 100.0
+    window_size = 6
+
+    main(chamber_volume_liters, leaf_area_cm2, window_size)
