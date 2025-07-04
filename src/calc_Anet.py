@@ -78,4 +78,4 @@ if __name__ == "__main__":
     leaf_area_cm2 = 100.0
     window_size = 20
 
-    main(box_volume, leaf_area_cm2, window_size, override_temp=True)
+    main(box_volume, leaf_area_cm2, window_size, override_temp=False)
