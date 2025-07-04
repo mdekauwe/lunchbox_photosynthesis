@@ -98,16 +98,13 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.4)
 
-    # Primary plot line for A_net
     line, = ax.plot([], [], 'g-', label="A_net")
+    ci_fill = None
+    ci_filled_once = False
 
-    # Secondary y-axis for temperature and RH
     ax2 = ax.twinx()
     temp_line, = ax2.plot([], [], 'r-', label="Temp (°C)")
     rh_line, = ax2.plot([], [], 'b--', label="RH (%)")
-
-    ci_fill = None
-    ci_filled_once = False
 
     ax.set_xlabel("Time (min)")
     ax.set_ylabel("Net Photosynthesis (μmol m⁻² s⁻¹)")
@@ -196,10 +193,12 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
                     co2_window.append(co2_dry)
                     time_window.append(now)
 
+                    # Append temp and rh and maintain maxlen
                     temp_values.append(temp)
                     rh_values.append(rh)
 
-                    print(f"CO₂: {co2:.1f} wet | {co2_dry:.1f} dry | T: {temp:.1f}°C | RH: {rh:.1f}%")
+                    print(f"CO₂: {co2:.1f} wet | {co2_dry:.1f} dry | "
+                          f"T: {temp:.1f}°C | RH: {rh:.1f}%")
 
                     if len(co2_window) >= 3:
                         times = np.array(time_window)
@@ -226,7 +225,8 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
                         A_net_u = -flux_u / leaf_area_m2
                         A_net_l = -flux_l / leaf_area_m2
 
-                        print(f"ΔCO₂: {corr_slope:+.4f} ± {1.96*stderr:.4f} | A_net: {A_net:+.2f}")
+                        print(f"ΔCO₂: {corr_slope:+.4f} ± {1.96*stderr:.4f} | "
+                              f"A_net: {A_net:+.2f}")
                         print("-" * 40)
 
                         anet_times.append(now)
@@ -252,13 +252,21 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
                                                   list(anet_upper),
                                                   color='seagreen', alpha=0.3)
 
-                        # Update temp and RH plots
-                        temp_times_rel = [(t - anet_times[0]) / 60 for t in anet_times][-len(temp_values):]
-                        temp_line.set_xdata(temp_times_rel)
-                        temp_line.set_ydata(list(temp_values))
+                        # Fix shape mismatch by matching lengths for temp and rh
+                        min_len = min(len(anet_times), len(temp_values), len(rh_values))
+                        if min_len > 0:
+                            temp_times_rel = [(t - anet_times[0]) / 60 for t in
+                                             list(anet_times)[-min_len:]]
+                            temp_line.set_xdata(temp_times_rel)
+                            temp_line.set_ydata(list(temp_values)[-min_len:])
 
-                        rh_line.set_xdata(temp_times_rel)
-                        rh_line.set_ydata(list(rh_values))
+                            rh_line.set_xdata(temp_times_rel)
+                            rh_line.set_ydata(list(rh_values)[-min_len:])
+                        else:
+                            temp_line.set_xdata([])
+                            temp_line.set_ydata([])
+                            rh_line.set_xdata([])
+                            rh_line.set_ydata([])
 
                         ax.relim()
                         ax.autoscale_view()
