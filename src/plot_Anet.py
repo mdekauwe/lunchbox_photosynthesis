@@ -286,7 +286,7 @@ class Photosynthesis:
                     times = times[valid_mask]
                     co2s = co2s[valid_mask]
 
-                    if len(co2s) >= 3:
+                    if len(co2s) >= self.window_size:
                         res = linregress(times - times[0], co2s)
                         slope = res.slope
                         stderr = res.stderr or 0.0

@@ -55,7 +55,7 @@ def main(box_volume, leaf_area_cm2, window_size, ofname):
                         f"RH: {rh:.1f} % | VPD: {vpd:.1f} kPa"
                     )
 
-                    if len(co2_window) >= 3:
+                    if len(co2_window) >= window_size:
                         times = np.array(time_window)
                         co2s = np.array(co2_window)
                         slope, _ = np.polyfit(times - times[0], co2s, 1)  # ppm/s
