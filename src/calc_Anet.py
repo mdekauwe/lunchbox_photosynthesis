@@ -80,10 +80,10 @@ def main(box_volume, leaf_area_cm2, window_size, ofname):
                                          f"{rh:.3f}", f"{vpd:.3f}",
                                          f"{anet_area:.3f}"])
                         f.flush()
+                        time.sleep(6.0)
                 else:
                     print(".", end="", flush=True)
-
-                time.sleep(0.5)
+                    time.sleep(0.5)
 
         except KeyboardInterrupt:
             print("\nStopping measurements.")
