@@ -54,7 +54,7 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
 
 
                     print(
-                        f"ΔCO₂: {slope:+.3f} ppm s⁻¹ | "
+                        f"ΔCO₂: {slope:+.3f} μmol mol⁻¹ s⁻¹ | "
                         f"A_net: {a_net:+.2f} μmol m⁻² s⁻¹"
                     )
                     print("-" * 40)
