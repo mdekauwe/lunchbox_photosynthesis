@@ -57,6 +57,13 @@ class Photosynthesis:
 
         return co2_wet_ppm / (1 - (e / pressure_pa))
 
+    @staticmethod
+    def calc_vpd(temp_c, rh_percent):
+        es = 0.6108 * np.exp((17.27 * temp_c) / (temp_c + 237.3))  # kPa
+        ea = es * (rh_percent / 100.0)
+
+        return es - ea  # kPa
+
     def _setup_sensor(self):
         self.sensor = qwiic_scd4x.QwiicSCD4x()
         if not self.sensor.is_connected():
@@ -204,6 +211,7 @@ class Photosynthesis:
                     co2 = self.sensor.get_co2()
                     temp = self.sensor.get_temperature()
                     rh = self.sensor.get_humidity()
+                    vpd = calc_vpd(temp, rh)
                     co2_dry = self.compute_co2_dry(co2, rh, temp,
                                                    self.pressure_pa)
                     now = time.time()
@@ -221,7 +229,8 @@ class Photosynthesis:
 
                         print(
                             f"CO₂: {co2:.1f} wet | {co2_dry:.1f} dry | "
-                            f"T: {temp:.1f}°C | RH: {rh:.1f}%"
+                            f"T: {temp:.1f}°C | RH: {rh:.1f}% | "
+                            f"VPD: {vpd:.1f} kPa"
                         )
                 else:
                     time.sleep(0.1)
@@ -231,7 +240,7 @@ class Photosynthesis:
     def run(self):
 
         DEG_2_K = 273.15
-        
+
         thread = threading.Thread(target=self.sensor_thread, daemon=True)
         thread.start()
 
