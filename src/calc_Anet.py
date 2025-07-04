@@ -82,10 +82,10 @@ def main(box_volume, leaf_area_cm2, window_size, ofname):
             print("\nStopping measurements.")
 
 def calc_anet(delta_ppm_s, box_volume, temp_k):
-    pressure_pa = 101325.
+    pressure = 101325. # Pa
     rgas = 8.314  # J K⁻¹ mol⁻¹
-    volume_m3 = box_volume / 1000.0
-    an_leaf = (delta_ppm_s * pressure_pa * volume_m3) / (rgas * temp_k)
+    volume_m3 = box_volume / 1000.0 # convert litre to m³
+    an_leaf = (delta_ppm_s * pressure * volume_m3) / (rgas * temp_k)
 
     return an_leaf # µmol leaf s⁻¹
 
