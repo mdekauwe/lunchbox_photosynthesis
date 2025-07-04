@@ -148,7 +148,7 @@ class PhotosynthesisLogger:
             print("Error initializing sensor")
             return
 
-        print("✅ ==Sensor ready. Use buttons to begin zero run or logging.")
+        print("==Sensor ready. Use buttons to begin zero run or logging.")
 
         self.setup_plot()
         plt.ion()
