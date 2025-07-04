@@ -23,7 +23,7 @@ def main(box_volume, leaf_area_cm2, window_size, ofname, override_temp=False,
     time_window = deque(maxlen=window_size)
 
     print("Starting measurements...")
-    with open(log_file, "w", newline="") as f:
+    with open(ofname, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["time", "co2", "temp", "rh", "vpd", "a_net"])
 
