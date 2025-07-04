@@ -10,6 +10,8 @@ def main(box_volume, leaf_area_cm2, window_size, ofname):
 
     DEG_2_K = 273.15
 
+    leaf_area_m2 = leaf_area_cm2 / 10000.0
+
     sensor = qwiic_scd4x.QwiicSCD4x()
     if not sensor.is_connected():
         print("Sensor not connected")
@@ -59,7 +61,6 @@ def main(box_volume, leaf_area_cm2, window_size, ofname):
                         slope, _ = np.polyfit(times - times[0], co2s, 1)  # ppm/s
 
                         temp_k = temp + DEG_2_K
-                        leaf_area_m2 = leaf_area_cm2 / 10000.0
                         anet_leaf = calc_anet(slope, box_volume, temp_k)
                         anet_area = -anet_leaf / leaf_area_m2  # µmol m⁻² s⁻¹
 
@@ -72,6 +73,7 @@ def main(box_volume, leaf_area_cm2, window_size, ofname):
                         writer.writerow([now_iso, f"{co2:.3f}", f"{temp:.3f}",
                                          f"{rh:.3f}", f"{vpd:.3f}",
                                          f"{anet_area:.3f}"])
+                        f.flush()
                 else:
                     print(".", end="", flush=True)
 
