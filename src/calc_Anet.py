@@ -13,7 +13,7 @@ def calc_anet(delta_ppm_s, box_volume, temp_k, pressure_pa):
 
 
 def main(box_volume, leaf_area_cm2, window_size):
-    pressure_pa = 101325
+    pressure_pa = 101325.
 
     sensor = qwiic_scd4x.QwiicSCD4x()
     if not sensor.is_connected():
@@ -73,6 +73,6 @@ if __name__ == "__main__":
 
     box_volume = 1.2
     leaf_area_cm2 = 100.0
-    window_size = 6
+    window_size = 20
 
     main(box_volume, leaf_area_cm2, window_size)
