@@ -35,6 +35,8 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
             if sensor.read_measurement():
                 co2 = sensor.get_co2()
                 temp = sensor.get_temperature()
+                if override_temp:
+                    temp = override_temp_c
                 rh = sensor.get_humidity()
                 now = time.time()
 
@@ -50,8 +52,6 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
                     times = np.array(time_window)
                     co2s = np.array(co2_window)
                     slope, _ = np.polyfit(times - times[0], co2s, 1)  # ppm/s
-                    if override_temp:
-                        temp = override_temp_c
                     temp_k = temp + 273.15
                     leaf_area_m2 = leaf_area_cm2 / 10000.0
                     an_leaf = calc_anet(slope, box_volume, temp_k, pressure_pa)
