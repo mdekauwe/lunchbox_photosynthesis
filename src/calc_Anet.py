@@ -68,7 +68,9 @@ def main(box_volume, leaf_area_cm2, window_size, ofname, override_temp=False,
 
                     with open(ofname, "a", newline="") as f:
                         writer = csv.writer(f)
-                        writer.writerow([now, co2, temp, rh, vpd, a_net])
+                        writer.writerow([f"{now:.3f}", f"{co2:.3f}",
+                                         f"{temp:.3f}", f"{rh:.3f}",
+                                         f"{vpd:.3f}", f"{a_net:.3f}"])
             else:
                 print(".", end="", flush=True)
 
