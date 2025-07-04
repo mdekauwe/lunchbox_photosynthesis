@@ -42,10 +42,10 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
                 co2_window.append(co2)
                 time_window.append(now)
 
-                print(f"{'CO₂':<5}: {co2:6.1f} μmol mol⁻¹ | "
-                      f"{'Temp':<4}: {temp:5.1f} °C | "
-                      f"{'RH':<2}: {rh:5.1f} % | "
-                      f"{'VPD':<3}: {vpd:4.2f} kPa")
+                print(
+                    f"CO₂: {co2:.1f} μmol mol⁻¹ | Temp: {temp:.1f} °C | "
+                    f"RH: {rh:.1f} % | VPD: {vpd:.1f} kPa"
+                )
 
                 if len(co2_window) >= 3:
                     times = np.array(time_window)
