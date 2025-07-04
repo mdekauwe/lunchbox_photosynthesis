@@ -41,7 +41,7 @@ def main(box_volume, leaf_area_cm2, window_size):
                 time_window.append(now)
 
                 print(
-                    f"CO₂: {co2:.1f} ppm | Temp: {temp:.1f} °C | "
+                    f"CO₂: {co2:.2f} ppm | Temp: {temp:.1f} °C | "
                     f"RH: {rh:.1f}%"
                 )
 
