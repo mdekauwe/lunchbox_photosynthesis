@@ -39,7 +39,7 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
                 time_window.append(now)
 
                 print(
-                    f"CO₂: {co2:.2f} μmol mol⁻1 | Temp: {temp:.1f} °C | "
+                    f"CO₂: {co2:.2f} μmol mol⁻¹ | Temp: {temp:.1f} °C | "
                     f"RH: {rh:.1f} % | VPD: {vpd:.1f} kPa"
                 )
 
@@ -54,7 +54,7 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
 
 
                     print(
-                        f"ΔCO₂: {slope:+.3f} ppm s^{-1} | "
+                        f"ΔCO₂: {slope:+.3f} ppm s⁻¹ | "
                         f"A_net: {a_net:+.2f} μmol m⁻² s⁻¹"
                     )
                     print("-" * 40)

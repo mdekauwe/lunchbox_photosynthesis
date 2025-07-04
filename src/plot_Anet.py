@@ -194,7 +194,7 @@ class Photosynthesis:
                                 slope, _ = np.polyfit(times_np - times_np[0],
                                                      co2_np, 1)
                                 self.zero_slope = slope
-                                print(f"Zero run complete: {slope:.4f} ppm/s")
+                                print(f"Zero run complete: {slope:.4f} ppm s⁻¹")
                             else:
                                 self.zero_slope = 0.0
                                 print("Not enough zero-run data.")
@@ -229,7 +229,7 @@ class Photosynthesis:
 
                         print(
                             f"CO₂: {co2:.1f} wet | {co2_dry:.1f} dry | "
-                            f"T: {temp:.1f}°C | RH: {rh:.1f} % | "
+                            f"T: {temp:.1f} °C | RH: {rh:.1f} % | "
                             f"VPD: {vpd:.1f} kPa"
                         )
                 else:
