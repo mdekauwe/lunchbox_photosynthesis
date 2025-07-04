@@ -53,6 +53,13 @@ def main(box_volume, leaf_area_cm2, window_size):
                     print(times)
                     print(times - times[0])
                     print(co2s)
+                    print(slope)
+
+                    print("-")
+                    from scipy.stats import linregress
+                    res = linregress(times - times[0], co2s)
+                    slope = res.slope
+                    print(slope)
                     import sys; sys.exit()
                     temp_k = temp + 273.15
                     leaf_area_m2 = leaf_area_cm2 / 10000.0
