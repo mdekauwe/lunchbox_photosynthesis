@@ -31,7 +31,7 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
                 temp = sensor.get_temperature()
                 if override_temp: # debugging - take out at some pt...
                     temp = override_temp_c
-                rh = sensor.get_humidity()
+                rh = max(0, min(100, sensor.get_humidity()))
                 vpd = calc_vpd(temp, rh)
                 now = time.time()
 
