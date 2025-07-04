@@ -280,6 +280,9 @@ class Photosynthesis:
                         slope_upper = corr_slope + 1.96 * stderr
                         slope_lower = corr_slope - 1.96 * stderr
 
+                        print(f"raw_slope = {slope:.5f}, zero_slope = {zero_slope:.5f}, corr_slope = {corr_slope:.5f}")
+
+
                         if len(temps) > 0:
                             temp_K = temps[-1] + 273.15
                         else:
