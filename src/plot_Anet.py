@@ -212,7 +212,7 @@ class Photosynthesis:
                     co2 = self.sensor.get_co2()
                     temp = self.sensor.get_temperature()
                     rh = self.sensor.get_humidity()
-                    vpd = calc_vpd(temp, rh)
+                    vpd = self.calc_vpd(temp, rh)
                     co2_dry = self.compute_co2_dry(co2, rh, temp,
                                                    self.pressure_pa)
                     now = time.time()
