@@ -61,7 +61,7 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
     ax.set_xlabel("Time (min)")
     ax.set_ylabel("Net Photosynthesis (μmol m⁻² s⁻¹)")
     ax.grid(True)
-    ax.legend()
+    #ax.legend()
 
     status_text = fig.text(0.5, 0.03, "Status: Idle", ha="center")
 
@@ -238,7 +238,6 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
 
                         ax.relim()
                         ax.autoscale_view()
-                        ax.set_title(f"A_net (Leaf = {leaf_area_cm2[0]:.1f} cm²)")
                         plt.draw()
                 else:
                     time.sleep(0.1)
