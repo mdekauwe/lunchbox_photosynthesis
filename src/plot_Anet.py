@@ -384,7 +384,7 @@ class Photosynthesis:
                             self.window_filled = True
 
                         print(
-                            f"CO₂: {co2:.1f} wet | {co2_dry:.1f} dry | "
+                            f"CO₂: {co2_dry:.1f} | "
                             f"T: {temp:.1f} °C | RH: {rh:.1f} % | "
                             f"VPD: {vpd:.1f} kPa"
                         )
