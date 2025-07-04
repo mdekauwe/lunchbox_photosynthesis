@@ -59,7 +59,8 @@ def main(box_volume, leaf_area_cm2, window_size, ofname):
                         times = np.array(time_window)
                         co2s = np.array(co2_window)
                         slope, _ = np.polyfit(times - times[0], co2s, 1)  # ppm/s
-
+                        print(co2s)
+                        import sys; sys.exit()
                         temp_k = temp + DEG_2_K
                         anet_leaf = calc_anet(slope, box_volume, temp_k)
                         anet_area = -anet_leaf / leaf_area_m2  # µmol m⁻² s⁻¹
