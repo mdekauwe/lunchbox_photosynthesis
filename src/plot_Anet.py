@@ -280,7 +280,6 @@ class Photosynthesis:
                         slope_upper = corr_slope + 1.96 * stderr
                         slope_lower = corr_slope - 1.96 * stderr
 
-                        print(f"raw_slope = {slope:.5f}, zero_slope = {zero_slope:.5f}, corr_slope = {corr_slope:.5f}")
 
 
                         if len(temps) > 0:
@@ -301,6 +300,13 @@ class Photosynthesis:
                         A_net = -an_leaf / leaf_area_m2
                         A_net_u = -an_leaf_u / leaf_area_m2
                         A_net_l = -an_leaf_l / leaf_area_m2
+
+                        print(f"slope = {slope:+.4f} ppm/s")
+                        print(f"temp_K = {temp_K:.2f} K")
+                        print(f"volume_m3 = {self.chamber_volume /1000:.4f} m³")
+                        print(f"leaf_area_m2 = {leaf_area_m2:.4f} m²")
+                        print(f"an_leaf = {an_leaf:.4f} µmol/s")
+                        print(f"A_net = {A_net:.2f} µmol m⁻² s⁻¹")
 
                         print(
                             f"ΔCO₂: {corr_slope:+.4f} ± {1.96*stderr:.4f} | "
