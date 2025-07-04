@@ -217,6 +217,14 @@ class Photosynthesis:
             raise RuntimeError("Sensor not connected")
         if not self.sensor.begin():
             raise RuntimeError("Error initializing sensor")
+
+        # Disable auto self-calibration
+        # The SCD40 performs automatic self-calibration by default, which
+        # assumes the sensor is in ambient air for at least 1 hour per day.
+        # it assumes the lowest CO2 value it sees is 400 ppm and calibrates
+        # accordingly
+        self.sensor.set_automatic_self_calibration(False)
+
         print("==Sensor ready. Use buttons to begin zero run or logging.")
 
     def _setup_plot(self):

@@ -24,6 +24,13 @@ def main(box_volume, leaf_area_cm2, window_size, ofname):
     co2_window = deque(maxlen=window_size)
     time_window = deque(maxlen=window_size)
 
+    # Disable auto self-calibration
+    # The SCD40 performs automatic self-calibration by default, which
+    # assumes the sensor is in ambient air for at least 1 hour per day.
+    # it assumes the lowest CO2 value it sees is 400 ppm and calibrates
+    # accordingly
+    sensor.set_automatic_self_calibration(False)
+
     print("Starting measurements...")
 
     with open(ofname, "w", newline="") as f:
