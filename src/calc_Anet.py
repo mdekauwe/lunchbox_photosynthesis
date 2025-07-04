@@ -12,7 +12,8 @@ def calc_anet(delta_ppm_s, box_volume, temp_k, pressure_pa):
     return an_leaf # umol leaf-1 s-1
 
 
-def main(box_volume, leaf_area_cm2, window_size):
+def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
+         override_temp_c=23.0):
     pressure_pa = 101325.
 
     sensor = qwiic_scd4x.QwiicSCD4x()
@@ -49,6 +50,8 @@ def main(box_volume, leaf_area_cm2, window_size):
                     times = np.array(time_window)
                     co2s = np.array(co2_window)
                     slope, _ = np.polyfit(times - times[0], co2s, 1)  # ppm/s
+                    if override_temp:
+                        temp = override_temp_c
                     temp_k = temp + 273.15
                     leaf_area_m2 = leaf_area_cm2 / 10000.0
                     an_leaf = calc_anet(slope, box_volume, temp_k, pressure_pa)
@@ -75,4 +78,4 @@ if __name__ == "__main__":
     leaf_area_cm2 = 100.0
     window_size = 20
 
-    main(box_volume, leaf_area_cm2, window_size)
+    main(box_volume, leaf_area_cm2, window_size, override_temp=True)
