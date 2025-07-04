@@ -8,19 +8,60 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, TextBox
 from scipy.stats import linregress
 
-
 def ppm_to_umol_s(delta_ppm_s, volume_liters, temp_K, pressure_pa,
                   R=8.314):
     volume_m3 = volume_liters / 1000.0
     mol_flux = (delta_ppm_s * pressure_pa * volume_m3) / (R * temp_K)
     return mol_flux
 
-
 def compute_co2_dry(co2_wet_ppm, rh_percent, temp_C, pressure_pa):
     e_s = 0.611 * np.exp((17.502 * temp_C) / (temp_C + 240.97)) * 1000
     e = rh_percent * e_s / 100.0
     return co2_wet_ppm / (1 - (e / pressure_pa))
 
+def update_leaf_area(text, leaf_area_cm2):
+    try:
+        value = float(text)
+        if value <= 0:
+            raise ValueError
+        leaf_area_cm2[0] = value
+        print(f"Leaf area set to {value:.1f} cm²")
+    except ValueError:
+        print("Invalid input. Please enter a positive number.")
+
+def start_zero_run(event, zero_run_started, logging_started,
+                   zero_data_times, zero_data_co2, status_text):
+    if zero_run_started[0]:
+        print("Zero run already in progress.")
+        return
+    if logging_started[0]:
+        print("Stop logging before starting zero run.")
+        return
+    zero_run_started[0] = True
+    zero_data_times.clear()
+    zero_data_co2.clear()
+    print("\nStarting zero calibration.")
+    status_text.set_text("Status: Zero calibration running...")
+    plt.draw()
+
+def start_logging(event, logging_started, zero_run_started,
+                  leaf_area_cm2, status_text):
+    if logging_started[0]:
+        print("Logging already in progress.")
+        return
+    if zero_run_started[0]:
+        print("Wait for zero calibration to finish before logging.")
+        return
+    logging_started[0] = True
+    print(f"\nLogging started. Leaf area = {leaf_area_cm2[0]:.1f} cm²")
+    status_text.set_text(f"Status: Logging... (Leaf = {leaf_area_cm2[0]:.1f} cm²)")
+    plt.draw()
+
+def stop_logging(event, stop_requested, status_text):
+    print("\nStop button pressed. Exiting...")
+    stop_requested[0] = True
+    status_text.set_text("Status: Stopped by user")
+    plt.draw()
 
 def main(chamber_volume, window_size, plot_window, pressure_pa,
          zero_run_duration, leaf_area_cm2_init):
@@ -61,68 +102,33 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
     ax.set_xlabel("Time (min)")
     ax.set_ylabel("Net Photosynthesis (μmol m⁻² s⁻¹)")
     ax.grid(True)
-    #ax.legend()
 
     status_text = fig.text(0.5, 0.03, "Status: Idle", ha="center")
 
-    def update_leaf_area(text):
-        try:
-            value = float(text)
-            if value <= 0:
-                raise ValueError
-            leaf_area_cm2[0] = value
-            print(f"Leaf area set to {value:.1f} cm²")
-        except ValueError:
-            print("Invalid input. Please enter a positive number.")
-
-    def start_zero_run(event):
-        if zero_run_started[0]:
-            print("Zero run already in progress.")
-            return
-        if logging_started[0]:
-            print("Stop logging before starting zero run.")
-            return
-        zero_run_started[0] = True
-        zero_data_times.clear()
-        zero_data_co2.clear()
-        print("\nStarting zero calibration.")
-        status_text.set_text("Status: Zero calibration running...")
-        plt.draw()
-
-    def start_logging(event):
-        if logging_started[0]:
-            print("Logging already in progress.")
-            return
-        if zero_run_started[0]:
-            print("Wait for zero calibration to finish before logging.")
-            return
-        logging_started[0] = True
-        print(f"\nLogging started. Leaf area = {leaf_area_cm2[0]:.1f} cm²")
-        status_text.set_text(f"Status: Logging... (Leaf = {leaf_area_cm2[0]:.1f} cm²)")
-        plt.draw()
-
-    def stop_logging(event):
-        print("\nStop button pressed. Exiting...")
-        stop_requested[0] = True
-        status_text.set_text("Status: Stopped by user")
-        plt.draw()
-
     ax_zero = plt.axes([0.05, 0.15, 0.25, 0.075])
     zero_button = Button(ax_zero, 'Start Zero Run')
-    zero_button.on_clicked(start_zero_run)
+    zero_button.on_clicked(lambda event: start_zero_run(event, zero_run_started,
+                                                       logging_started,
+                                                       zero_data_times,
+                                                       zero_data_co2,
+                                                       status_text))
 
     ax_start = plt.axes([0.375, 0.15, 0.25, 0.075])
     start_button = Button(ax_start, 'Start Logging')
-    start_button.on_clicked(start_logging)
+    start_button.on_clicked(lambda event: start_logging(event, logging_started,
+                                                        zero_run_started,
+                                                        leaf_area_cm2,
+                                                        status_text))
 
     ax_stop = plt.axes([0.7, 0.15, 0.25, 0.075])
     stop_button = Button(ax_stop, 'Stop Logging')
-    stop_button.on_clicked(stop_logging)
+    stop_button.on_clicked(lambda event: stop_logging(event, stop_requested,
+                                                      status_text))
 
     ax_text = plt.axes([0.05, 0.03, 0.25, 0.05])
     text_box = TextBox(ax_text, "Leaf Area (cm²)",
                        initial=str(leaf_area_cm2[0]))
-    text_box.on_submit(update_leaf_area)
+    text_box.on_submit(lambda text: update_leaf_area(text, leaf_area_cm2))
 
     start_time = None
 
@@ -149,8 +155,7 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
                         if len(zero_data_co2) >= 3:
                             times_np = np.array(zero_data_times)
                             co2_np = np.array(zero_data_co2)
-                            slope, _ = np.polyfit(times_np - times_np[0],
-                                                  co2_np, 1)
+                            slope, _ = np.polyfit(times_np - times_np[0], co2_np, 1)
                             zero_slope[0] = slope
                             print(f"Zero run complete: {slope:.4f} ppm/s")
                         else:
@@ -219,8 +224,7 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
                             anet_upper.popleft()
                             anet_lower.popleft()
 
-                        times_rel = [(t - anet_times[0]) / 60
-                                     for t in anet_times]
+                        times_rel = [(t - anet_times[0]) / 60 for t in anet_times]
                         line.set_xdata(times_rel)
                         line.set_ydata(anet_values)
 
@@ -249,8 +253,8 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
         plt.show()
         print("Exited cleanly.")
 
-
 if __name__ == "__main__":
+
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--leaf_area', type=float,
