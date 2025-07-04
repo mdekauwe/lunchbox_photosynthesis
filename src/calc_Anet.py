@@ -5,11 +5,11 @@ from collections import deque
 import matplotlib.pyplot as plt
 
 
-def ppm_to_umol_s(delta_ppm_s, box_volume, temp_k,
-                  pressure_pa, RGAS=8.314):
+def calc_anet(delta_ppm_s, box_volume, temp_k, pressure_pa):
+    RGAS = 8.314
     volume_m3 = box_volume / 1000.0
-    mol_flux = (delta_ppm_s * pressure_pa * volume_m3) / (RGAS * temp_k)
-    return mol_flux
+    an_leaf = (delta_ppm_s * pressure_pa * volume_m3) / (RGAS * temp_k)
+    return an_leaf # umol leaf-1 s-1
 
 
 def main(box_volume, leaf_area_cm2, window_size):
@@ -49,25 +49,10 @@ def main(box_volume, leaf_area_cm2, window_size):
                     times = np.array(time_window)
                     co2s = np.array(co2_window)
                     slope, _ = np.polyfit(times - times[0], co2s, 1)  # ppm/s
-
-                    print(times)
-                    print(times - times[0])
-                    print(co2s)
-                    print(slope)
-
-                    print("-")
-                    from scipy.stats import linregress
-                    res = linregress(times - times[0], co2s)
-                    slope = res.slope
-                    print(slope)
-                    import sys; sys.exit()
                     temp_k = temp + 273.15
                     leaf_area_m2 = leaf_area_cm2 / 10000.0
-
-                    mol_flux = ppm_to_umol_s(slope, box_volume,
-                                             temp_k, pressure_pa)
-
-                    a_net = -mol_flux / leaf_area_m2
+                    an_leaf = calc_anet(slope, box_volume, temp_k, pressure_pa)
+                    a_net = -an_leaf / leaf_area_m2 # umol m-2 s-1
 
                     print(
                         f"ΔCO₂: {slope:+.3f} ppm/s | "
@@ -85,6 +70,7 @@ def main(box_volume, leaf_area_cm2, window_size):
 
 
 if __name__ == "__main__":
+
     box_volume = 1.2
     leaf_area_cm2 = 100.0
     window_size = 6

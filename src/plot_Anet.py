@@ -10,7 +10,7 @@ from matplotlib.widgets import Button, TextBox
 from scipy.stats import linregress
 
 
-class PhotosynthesisLogger:
+class Photosynthesis:
 
     def __init__(self, chamber_volume, window_size, plot_window,
                  zero_run_duration, leaf_area_cm2_init):
@@ -43,10 +43,11 @@ class PhotosynthesisLogger:
         self._setup_plot()
 
     @staticmethod
-    def ppm_to_umol_s(delta_ppm_s, box_volume, temp_K, pressure_pa, RGAS=8.314):
-        volume_m3 = box_volume / 1000.0
-        mol_flux = (delta_ppm_s * pressure_pa * volume_m3) / (RGAS * temp_K)
-        return mol_flux
+    def calc_anet(delta_ppm_s,  temp_K):
+        RGAS=8.314
+        volume_m3 = self.chamber_volume / 1000.0
+        an_leaf = (delta_ppm_s * self.pressure_pa * volume_m3) / (RGAS * temp_K)
+        return an_leaf # umol leaf-1 s-1
 
     @staticmethod
     def compute_co2_dry(co2_wet_ppm, rh_percent, temp_C, pressure_pa):
@@ -284,19 +285,13 @@ class PhotosynthesisLogger:
                         else:
                             temp_K = 298.15
 
-                        flux = self.ppm_to_umol_s(corr_slope,
-                                                  self.chamber_volume,
-                                                  temp_K, self.pressure_pa)
-                        flux_u = self.ppm_to_umol_s(slope_upper,
-                                                    self.chamber_volume,
-                                                    temp_K, self.pressure_pa)
-                        flux_l = self.ppm_to_umol_s(slope_lower,
-                                                    self.chamber_volume,
-                                                    temp_K, self.pressure_pa)
+                        an_leaf = self.calc_anet(corr_slope, temp_K)
+                        an_leaf_u = self.calc_anet(slope_upper, temp_K)
+                        an_leaf_l = self.calc_anet(slope_lower, temp_K)
 
-                        A_net = -flux / leaf_area_m2
-                        A_net_u = -flux_u / leaf_area_m2
-                        A_net_l = -flux_l / leaf_area_m2
+                        A_net = -an_leaf / leaf_area_m2
+                        A_net_u = -an_leaf_u / leaf_area_m2
+                        A_net_l = -an_leaf_l / leaf_area_m2
 
                         print(
                             f"ΔCO₂: {corr_slope:+.4f} ± {1.96*stderr:.4f} | "
@@ -379,11 +374,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     la_init = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 100.0
 
-    logger = PhotosynthesisLogger(
-        chamber_volume=1.2,
-        window_size=6,
-        plot_window=300,
-        zero_run_duration=30,
-        leaf_area_cm2_init=la_init
-    )
+    logger = Photosynthesis(chamber_volume=1.2, window_size=6, plot_window=300,
+                            zero_run_duration=30, leaf_area_cm2_init=la_init)
     logger.run()
