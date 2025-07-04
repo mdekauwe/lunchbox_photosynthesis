@@ -359,7 +359,7 @@ class Photosynthesis:
                             self.zero_run_started = False
                             self.status_text.set_text("Status: Zero run complete")
                         plt.draw()
-                time.sleep(0.5)
+                time.sleep(6.0)
                 continue
 
             if logging:
@@ -389,9 +389,9 @@ class Photosynthesis:
                             f"VPD: {vpd:.1f} kPa"
                         )
                 else:
-                    time.sleep(0.1)
+                    time.sleep(6.0)
             else:
-                time.sleep(0.1)
+                time.sleep(0.5)
 
 
 if __name__ == "__main__":
