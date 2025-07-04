@@ -51,6 +51,7 @@ def main(box_volume, leaf_area_cm2, window_size):
                     slope, _ = np.polyfit(times - times[0], co2s, 1)  # ppm/s
 
                     print(times)
+                    print(times - times[0])
                     print(co2s)
                     import sys; sys.exit()
                     temp_k = temp + 273.15
