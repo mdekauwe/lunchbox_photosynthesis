@@ -11,41 +11,34 @@ from scipy.stats import linregress
 
 
 class PhotosynthesisLogger:
+
     def __init__(self, chamber_volume, window_size, plot_window,
-                 pressure_pa, zero_run_duration, leaf_area_cm2_init):
+                 zero_run_duration, leaf_area_cm2_init):
+
         self.chamber_volume = chamber_volume
         self.window_size = window_size
         self.plot_window = plot_window
-        self.pressure_pa = pressure_pa
+        self.pressure_pa = 101325.
         self.zero_run_duration = zero_run_duration
-
         self.leaf_area_cm2 = [leaf_area_cm2_init]
-
         self.logging_started = False
         self.zero_run_started = False
         self.stop_requested = False
-
         self.zero_slope = 0.0
-
         self.co2_window = np.full(window_size, np.nan)
         self.time_window = np.full(window_size, np.nan)
         self.temp_values = np.full(window_size, np.nan)
         self.rh_values = np.full(window_size, np.nan)
         self.window_index = 0
         self.window_filled = False
-
         self.anet_times = deque()
         self.anet_values = deque()
         self.anet_upper = deque()
         self.anet_lower = deque()
-
         self.zero_data_times = []
         self.zero_data_co2 = []
-
         self.start_time = None
-
         self.lock = threading.Lock()
-
         self._setup_sensor()
         self._setup_plot()
 
@@ -79,8 +72,10 @@ class PhotosynthesisLogger:
         self.ci_filled_once = False
 
         self.ax2 = self.ax.twinx()
-        self.temp_line, = self.ax2.plot([], [], 'r-', label="Temp (°C)")
-        self.rh_line, = self.ax2.plot([], [], 'b--', label="RH (%)")
+        self.temp_line, = self.ax2.plot([], [], '-', color="#377eb8",
+                                        label="Temp (°C)")
+        self.rh_line, = self.ax2.plot([], [], '-', color="#ff7f00",
+                                      label="RH (%)")
 
         self.ax.set_xlabel("Time (min)")
         self.ax.set_ylabel("Net Photosynthesis (μmol m⁻² s⁻¹)")
@@ -257,7 +252,8 @@ class PhotosynthesisLogger:
                     continue
 
                 if logging:
-                    co2_window, time_window, temp_vals, rh_vals, filled, idx = co2_data
+                    (co2_window, time_window, temp_vals,
+                     rh_vals, filled, idx) = co2_data
 
                     if filled:
                         times = time_window
@@ -387,7 +383,6 @@ if __name__ == "__main__":
         chamber_volume=1.2,
         window_size=6,
         plot_window=300,
-        pressure_pa=101325,
         zero_run_duration=30,
         leaf_area_cm2_init=la_init
     )
