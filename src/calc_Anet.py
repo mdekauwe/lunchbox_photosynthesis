@@ -39,8 +39,8 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
                 time_window.append(now)
 
                 print(
-                    f"CO₂: {co2:.2f} ppm | Temp: {temp:.1f} °C | "
-                    f"RH: {rh:.1f}% | VPD: {vpd:.1f} kPa"
+                    f"CO₂: {co2:.2f} μmol mol⁻1 | Temp: {temp:.1f} °C | "
+                    f"RH: {rh:.1f} % | VPD: {vpd:.1f} kPa"
                 )
 
                 if len(co2_window) >= 3:
@@ -54,7 +54,7 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
 
 
                     print(
-                        f"ΔCO₂: {slope:+.3f} ppm s$^{-1}$ | "
+                        f"ΔCO₂: {slope:+.3f} ppm s^{-1} | "
                         f"A_net: {a_net:+.2f} μmol m⁻² s⁻¹"
                     )
                     print("-" * 40)
@@ -78,7 +78,7 @@ def calc_anet(delta_ppm_s, box_volume, temp_k):
 def calc_vpd(temp_c, rh_percent):
     es = 0.6108 * np.exp((17.27 * temp_c) / (temp_c + 237.3))  # kPa
     ea = es * (rh_percent / 100.0) # kPa
-    print(rh_percent)
+
     return es - ea  # kPa
 
 if __name__ == "__main__":
