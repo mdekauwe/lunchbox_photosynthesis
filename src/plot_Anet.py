@@ -91,17 +91,30 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
     zero_data_times = []
     zero_data_co2 = []
 
+    temp_values = deque(maxlen=window_size)
+    rh_values = deque(maxlen=window_size)
+
     plt.ion()
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.4)
 
+    # Primary plot line for A_net
     line, = ax.plot([], [], 'g-', label="A_net")
+
+    # Secondary y-axis for temperature and RH
+    ax2 = ax.twinx()
+    temp_line, = ax2.plot([], [], 'r-', label="Temp (°C)")
+    rh_line, = ax2.plot([], [], 'b--', label="RH (%)")
+
     ci_fill = None
     ci_filled_once = False
 
     ax.set_xlabel("Time (min)")
     ax.set_ylabel("Net Photosynthesis (μmol m⁻² s⁻¹)")
     ax.grid(True)
+
+    ax2.set_ylabel("Temp (°C) / RH (%)")
+    ax2.set_ylim(0, 100)
 
     status_text = fig.text(0.5, 0.03, "Status: Idle", ha="center")
 
@@ -183,6 +196,9 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
                     co2_window.append(co2_dry)
                     time_window.append(now)
 
+                    temp_values.append(temp)
+                    rh_values.append(rh)
+
                     print(f"CO₂: {co2:.1f} wet | {co2_dry:.1f} dry | T: {temp:.1f}°C | RH: {rh:.1f}%")
 
                     if len(co2_window) >= 3:
@@ -236,12 +252,24 @@ def main(chamber_volume, window_size, plot_window, pressure_pa,
                                                   list(anet_upper),
                                                   color='seagreen', alpha=0.3)
 
-                        if not ci_filled_once:
-                            ax.legend()
-                            ci_filled_once = True
+                        # Update temp and RH plots
+                        temp_times_rel = [(t - anet_times[0]) / 60 for t in anet_times][-len(temp_values):]
+                        temp_line.set_xdata(temp_times_rel)
+                        temp_line.set_ydata(list(temp_values))
+
+                        rh_line.set_xdata(temp_times_rel)
+                        rh_line.set_ydata(list(rh_values))
 
                         ax.relim()
                         ax.autoscale_view()
+                        ax2.relim()
+                        ax2.autoscale_view()
+
+                        if not ci_filled_once:
+                            ax.legend(loc='upper left')
+                            ax2.legend(loc='upper right')
+                            ci_filled_once = True
+
                         plt.draw()
                 else:
                     time.sleep(0.1)
