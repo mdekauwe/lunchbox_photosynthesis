@@ -28,6 +28,9 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
         while True:
             if sensor.read_measurement():
                 co2 = sensor.get_co2()
+                if co2 <= 0. or np.isnan(co2): # filter bad values
+                    print("Invalid CO₂ reading, skipping...")
+                    continue
                 temp = sensor.get_temperature()
                 if override_temp: # debugging - take out at some pt...
                     temp = override_temp_c
