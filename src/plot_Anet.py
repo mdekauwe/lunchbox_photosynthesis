@@ -43,16 +43,18 @@ class Photosynthesis:
         self._setup_plot()
 
     @staticmethod
-    def calc_anet(delta_ppm_s,  temp_K, chamber_volume, pressure_pa):
-        RGAS=8.314
+    def calc_anet(delta_ppm_s, temp_K, chamber_volume, pressure_pa):
+        RGAS = 8.314
         volume_m3 = chamber_volume / 1000.0
         an_leaf = (delta_ppm_s * pressure_pa * volume_m3) / (RGAS * temp_K)
+
         return an_leaf # umol leaf-1 s-1
 
     @staticmethod
     def compute_co2_dry(co2_wet_ppm, rh_percent, temp_C, pressure_pa):
         e_s = (0.611 * np.exp((17.502 * temp_C) / (temp_C + 240.97)) * 1000)
         e = rh_percent * e_s / 100.0
+
         return co2_wet_ppm / (1 - (e / pressure_pa))
 
     def _setup_sensor(self):
@@ -280,8 +282,6 @@ class Photosynthesis:
                         slope_upper = corr_slope + 1.96 * stderr
                         slope_lower = corr_slope - 1.96 * stderr
 
-
-
                         if len(temps) > 0:
                             temp_K = temps[-1] + 273.15
                         else:
@@ -322,7 +322,8 @@ class Photosynthesis:
                             self.anet_lower.append(A_net_l)
 
                             while (self.anet_times and
-                                   (now - self.anet_times[0]) > self.plot_window):
+                                   (now - self.anet_times[0]) > \
+                                    self.plot_window):
                                 self.anet_times.popleft()
                                 self.anet_values.popleft()
                                 self.anet_upper.popleft()
@@ -345,10 +346,8 @@ class Photosynthesis:
                         min_len = min(len(self.anet_times),
                                       len(temps), len(rhs))
                         if min_len > 0:
-                            temp_times_rel = [
-                                (t - self.anet_times[0]) / 60
-                                for t in list(self.anet_times)[-min_len:]
-                            ]
+                            temp_times_rel = [(t - self.anet_times[0]) / 60
+                                for t in list(self.anet_times)[-min_len:]]
                             self.temp_line.set_xdata(temp_times_rel)
                             self.temp_line.set_ydata(list(temps)[-min_len:])
 
@@ -366,7 +365,6 @@ class Photosynthesis:
                         self.ax2.autoscale_view()
 
                         if not self.ci_filled_once:
-                            # Combine all lines in one legend at upper left
                             lines = [self.line, self.temp_line, self.rh_line]
                             labels = [line.get_label() for line in lines]
                             self.ax.legend(lines, labels, loc='upper left')
@@ -382,13 +380,15 @@ class Photosynthesis:
 
 
 if __name__ == "__main__":
+
     import argparse
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('--leaf_area', type=float,
                         help='Initial leaf area in cm²')
     args = parser.parse_args()
-    la_init = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 100.0
+    la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 100.0
 
     logger = Photosynthesis(chamber_volume=1.2, window_size=20, plot_window=300,
-                            zero_run_duration=30, leaf_area_cm2_init=la_init)
+                            zero_run_duration=30, leaf_area_cm2_init=la)
     logger.run()

@@ -5,15 +5,9 @@ from collections import deque
 import matplotlib.pyplot as plt
 
 
-def calc_anet(delta_ppm_s, box_volume, temp_k, pressure_pa):
-    RGAS = 8.314
-    volume_m3 = box_volume / 1000.0
-    an_leaf = (delta_ppm_s * pressure_pa * volume_m3) / (RGAS * temp_k)
-    return an_leaf # umol leaf-1 s-1
-
-
 def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
          override_temp_c=23.0):
+
     pressure_pa = 101325.
 
     sensor = qwiic_scd4x.QwiicSCD4x()
@@ -70,6 +64,14 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
 
     except KeyboardInterrupt:
         print("\nStopping measurements.")
+
+def calc_anet(delta_ppm_s, box_volume, temp_k, pressure_pa):
+
+    RGAS = 8.314
+    volume_m3 = box_volume / 1000.0
+    an_leaf = (delta_ppm_s * pressure_pa * volume_m3) / (RGAS * temp_k)
+
+    return an_leaf # umol leaf-1 s-1
 
 
 if __name__ == "__main__":
