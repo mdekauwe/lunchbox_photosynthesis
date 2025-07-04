@@ -1,4 +1,5 @@
 import time
+import threading
 import qwiic_scd4x
 import numpy as np
 from collections import deque
@@ -26,10 +27,12 @@ class PhotosynthesisLogger:
 
         self.zero_slope = 0.0
 
-        self.co2_window = deque(maxlen=window_size)
-        self.time_window = deque(maxlen=window_size)
-        self.temp_values = deque(maxlen=window_size)
-        self.rh_values = deque(maxlen=window_size)
+        self.co2_window = np.full(window_size, np.nan)
+        self.time_window = np.full(window_size, np.nan)
+        self.temp_values = np.full(window_size, np.nan)
+        self.rh_values = np.full(window_size, np.nan)
+        self.window_index = 0
+        self.window_filled = False
 
         self.anet_times = deque()
         self.anet_values = deque()
@@ -40,6 +43,8 @@ class PhotosynthesisLogger:
         self.zero_data_co2 = []
 
         self.start_time = None
+
+        self.lock = threading.Lock()
 
         self._setup_sensor()
         self._setup_plot()
@@ -108,33 +113,36 @@ class PhotosynthesisLogger:
             value = float(text)
             if value <= 0:
                 raise ValueError
-            self.leaf_area_cm2[0] = value
+            with self.lock:
+                self.leaf_area_cm2[0] = value
             print(f"Leaf area set to {value:.1f} cm²")
         except ValueError:
             print("Invalid input. Please enter a positive number.")
 
     def start_zero_run(self, event):
-        if self.zero_run_started:
-            print("Zero run already in progress.")
-            return
-        if self.logging_started:
-            print("Stop logging before starting zero run.")
-            return
-        self.zero_run_started = True
-        self.zero_data_times.clear()
-        self.zero_data_co2.clear()
+        with self.lock:
+            if self.zero_run_started:
+                print("Zero run already in progress.")
+                return
+            if self.logging_started:
+                print("Stop logging before starting zero run.")
+                return
+            self.zero_run_started = True
+            self.zero_data_times.clear()
+            self.zero_data_co2.clear()
         print("\nStarting zero calibration.")
         self.status_text.set_text("Status: Zero calibration running...")
         plt.draw()
 
     def start_logging(self, event):
-        if self.logging_started:
-            print("Logging already in progress.")
-            return
-        if self.zero_run_started:
-            print("Wait for zero calibration to finish before logging.")
-            return
-        self.logging_started = True
+        with self.lock:
+            if self.logging_started:
+                print("Logging already in progress.")
+                return
+            if self.zero_run_started:
+                print("Wait for zero calibration to finish before logging.")
+                return
+            self.logging_started = True
         print(f"\nLogging started. Leaf area = {self.leaf_area_cm2[0]:.1f} cm²")
         self.status_text.set_text(
             f"Status: Logging... (Leaf = {self.leaf_area_cm2[0]:.1f} cm²)")
@@ -142,34 +150,39 @@ class PhotosynthesisLogger:
 
     def stop_logging(self, event):
         print("\nStop button pressed. Exiting...")
-        self.stop_requested = True
+        with self.lock:
+            self.stop_requested = True
         self.status_text.set_text("Status: Stopped by user")
         plt.draw()
 
-    def run(self):
-        try:
-            while not self.stop_requested:
-                plt.pause(0.01)
+    def sensor_thread(self):
+        while True:
+            with self.lock:
+                if self.stop_requested:
+                    break
+                zero_run = self.zero_run_started
+                logging = self.logging_started
+            if zero_run:
+                if self.sensor.read_measurement():
+                    co2 = self.sensor.get_co2()
+                    temp = self.sensor.get_temperature()
+                    rh = self.sensor.get_humidity()
+                    co2_dry = self.compute_co2_dry(co2, rh, temp,
+                                                   self.pressure_pa)
+                    now = time.time()
 
-                if self.zero_run_started:
-                    if self.sensor.read_measurement():
-                        co2 = self.sensor.get_co2()
-                        temp = self.sensor.get_temperature()
-                        rh = self.sensor.get_humidity()
-                        co2_dry = self.compute_co2_dry(co2, rh, temp,
-                                                       self.pressure_pa)
-                        now = time.time()
-
+                    with self.lock:
                         self.zero_data_times.append(now)
                         self.zero_data_co2.append(co2_dry)
 
-                        elapsed = now - self.zero_data_times[0]
-                        self.status_text.set_text(
-                            f"Zero run: {int(elapsed)} / {self.zero_run_duration}s"
-                        )
-                        plt.draw()
+                    elapsed = now - self.zero_data_times[0]
+                    self.status_text.set_text(
+                        f"Zero run: {int(elapsed)} / {self.zero_run_duration}s"
+                    )
+                    plt.draw()
 
-                        if elapsed >= self.zero_run_duration:
+                    if elapsed >= self.zero_run_duration:
+                        with self.lock:
                             if len(self.zero_data_co2) >= 3:
                                 times_np = np.array(self.zero_data_times)
                                 co2_np = np.array(self.zero_data_co2)
@@ -184,67 +197,119 @@ class PhotosynthesisLogger:
                             self.zero_data_co2.clear()
                             self.zero_run_started = False
                             self.status_text.set_text("Status: Zero run complete")
-                            plt.draw()
-                    time.sleep(0.5)
-                    continue
+                        plt.draw()
+                time.sleep(0.5)
+                continue
 
-                if self.logging_started:
-                    if self.start_time is None:
-                        self.start_time = time.time()
+            if logging:
+                if self.sensor.read_measurement():
+                    co2 = self.sensor.get_co2()
+                    temp = self.sensor.get_temperature()
+                    rh = self.sensor.get_humidity()
+                    co2_dry = self.compute_co2_dry(co2, rh, temp,
+                                                   self.pressure_pa)
+                    now = time.time()
 
-                    if self.sensor.read_measurement():
-                        co2 = self.sensor.get_co2()
-                        temp = self.sensor.get_temperature()
-                        rh = self.sensor.get_humidity()
-                        co2_dry = self.compute_co2_dry(co2, rh, temp,
-                                                       self.pressure_pa)
-                        now = time.time()
+                    with self.lock:
+                        idx = self.window_index
+                        self.co2_window[idx] = co2_dry
+                        self.time_window[idx] = now
+                        self.temp_values[idx] = temp
+                        self.rh_values[idx] = rh
 
-                        self.co2_window.append(co2_dry)
-                        self.time_window.append(now)
-
-                        self.temp_values.append(temp)
-                        self.rh_values.append(rh)
+                        self.window_index = (idx + 1) % self.window_size
+                        if self.window_index == 0:
+                            self.window_filled = True
 
                         print(
                             f"CO₂: {co2:.1f} wet | {co2_dry:.1f} dry | "
                             f"T: {temp:.1f}°C | RH: {rh:.1f}%"
                         )
+                else:
+                    time.sleep(0.1)
+            else:
+                time.sleep(0.1)
 
-                        if len(self.co2_window) >= 3:
-                            times = np.array(self.time_window)
-                            co2s = np.array(self.co2_window)
-                            res = linregress(times - times[0], co2s)
-                            slope = res.slope
-                            stderr = res.stderr or 0.0
+    def run(self):
+        thread = threading.Thread(target=self.sensor_thread, daemon=True)
+        thread.start()
 
-                            corr_slope = slope - self.zero_slope
-                            slope_upper = corr_slope + 1.96 * stderr
-                            slope_lower = corr_slope - 1.96 * stderr
+        try:
+            while not self.stop_requested:
+                plt.pause(0.05)
+                with self.lock:
+                    logging = self.logging_started
+                    zero_run = self.zero_run_started
+                    co2_data = (self.co2_window.copy(),
+                                self.time_window.copy(),
+                                self.temp_values.copy(),
+                                self.rh_values.copy(),
+                                self.window_filled,
+                                self.window_index)
+                    anet_times = list(self.anet_times)
+                    anet_values = list(self.anet_values)
+                    anet_upper = list(self.anet_upper)
+                    anet_lower = list(self.anet_lower)
+                    zero_slope = self.zero_slope
+                    leaf_area_m2 = self.leaf_area_cm2[0] / 10000.0
 
-                            temp_K = temp + 273.15
-                            leaf_area_m2 = self.leaf_area_cm2[0] / 10000.0
+                if zero_run:
+                    continue
 
-                            flux = self.ppm_to_umol_s(corr_slope,
-                                                      self.chamber_volume,
-                                                      temp_K, self.pressure_pa)
-                            flux_u = self.ppm_to_umol_s(slope_upper,
-                                                        self.chamber_volume,
-                                                        temp_K, self.pressure_pa)
-                            flux_l = self.ppm_to_umol_s(slope_lower,
-                                                        self.chamber_volume,
-                                                        temp_K, self.pressure_pa)
+                if logging:
+                    co2_window, time_window, temp_vals, rh_vals, filled, idx = co2_data
 
-                            A_net = -flux / leaf_area_m2
-                            A_net_u = -flux_u / leaf_area_m2
-                            A_net_l = -flux_l / leaf_area_m2
+                    if filled:
+                        times = time_window
+                        co2s = co2_window
+                        temps = temp_vals
+                        rhs = rh_vals
+                    else:
+                        times = time_window[:idx]
+                        co2s = co2_window[:idx]
+                        temps = temp_vals[:idx]
+                        rhs = rh_vals[:idx]
 
-                            print(
-                                f"ΔCO₂: {corr_slope:+.4f} ± {1.96*stderr:.4f} | "
-                                f"A_net: {A_net:+.2f}"
-                            )
-                            print("-" * 40)
+                    valid_mask = (~np.isnan(times)) & (~np.isnan(co2s))
+                    times = times[valid_mask]
+                    co2s = co2s[valid_mask]
 
+                    if len(co2s) >= 3:
+                        res = linregress(times - times[0], co2s)
+                        slope = res.slope
+                        stderr = res.stderr or 0.0
+
+                        corr_slope = slope - zero_slope
+                        slope_upper = corr_slope + 1.96 * stderr
+                        slope_lower = corr_slope - 1.96 * stderr
+
+                        if len(temps) > 0:
+                            temp_K = temps[-1] + 273.15
+                        else:
+                            temp_K = 298.15
+
+                        flux = self.ppm_to_umol_s(corr_slope,
+                                                  self.chamber_volume,
+                                                  temp_K, self.pressure_pa)
+                        flux_u = self.ppm_to_umol_s(slope_upper,
+                                                    self.chamber_volume,
+                                                    temp_K, self.pressure_pa)
+                        flux_l = self.ppm_to_umol_s(slope_lower,
+                                                    self.chamber_volume,
+                                                    temp_K, self.pressure_pa)
+
+                        A_net = -flux / leaf_area_m2
+                        A_net_u = -flux_u / leaf_area_m2
+                        A_net_l = -flux_l / leaf_area_m2
+
+                        print(
+                            f"ΔCO₂: {corr_slope:+.4f} ± {1.96*stderr:.4f} | "
+                            f"A_net: {A_net:+.2f}"
+                        )
+                        print("-" * 40)
+
+                        now = time.time()
+                        with self.lock:
                             self.anet_times.append(now)
                             self.anet_values.append(A_net)
                             self.anet_upper.append(A_net_u)
@@ -257,55 +322,51 @@ class PhotosynthesisLogger:
                                 self.anet_upper.popleft()
                                 self.anet_lower.popleft()
 
-                            times_rel = [(t - self.anet_times[0]) / 60
-                                         for t in self.anet_times]
-                            self.line.set_xdata(times_rel)
-                            self.line.set_ydata(self.anet_values)
+                        times_rel = [(t - self.anet_times[0]) / 60
+                                     for t in self.anet_times]
+                        self.line.set_xdata(times_rel)
+                        self.line.set_ydata(self.anet_values)
 
-                            if self.ci_fill:
-                                self.ci_fill.remove()
+                        if self.ci_fill:
+                            self.ci_fill.remove()
 
-                            self.ci_fill = self.ax.fill_between(
-                                times_rel,
-                                list(self.anet_lower),
-                                list(self.anet_upper),
-                                color='seagreen', alpha=0.3)
+                        self.ci_fill = self.ax.fill_between(
+                            times_rel,
+                            list(self.anet_lower),
+                            list(self.anet_upper),
+                            color='seagreen', alpha=0.3)
 
-                            min_len = min(len(self.anet_times),
-                                          len(self.temp_values),
-                                          len(self.rh_values))
-                            if min_len > 0:
-                                temp_times_rel = [
-                                    (t - self.anet_times[0]) / 60
-                                    for t in list(self.anet_times)[-min_len:]
-                                ]
-                                self.temp_line.set_xdata(temp_times_rel)
-                                self.temp_line.set_ydata(
-                                    list(self.temp_values)[-min_len:])
+                        min_len = min(len(self.anet_times),
+                                      len(temps), len(rhs))
+                        if min_len > 0:
+                            temp_times_rel = [
+                                (t - self.anet_times[0]) / 60
+                                for t in list(self.anet_times)[-min_len:]
+                            ]
+                            self.temp_line.set_xdata(temp_times_rel)
+                            self.temp_line.set_ydata(list(temps)[-min_len:])
 
-                                self.rh_line.set_xdata(temp_times_rel)
-                                self.rh_line.set_ydata(
-                                    list(self.rh_values)[-min_len:])
-                            else:
-                                self.temp_line.set_xdata([])
-                                self.temp_line.set_ydata([])
-                                self.rh_line.set_xdata([])
-                                self.rh_line.set_ydata([])
+                            self.rh_line.set_xdata(temp_times_rel)
+                            self.rh_line.set_ydata(list(rhs)[-min_len:])
+                        else:
+                            self.temp_line.set_xdata([])
+                            self.temp_line.set_ydata([])
+                            self.rh_line.set_xdata([])
+                            self.rh_line.set_ydata([])
 
-                            self.ax.relim()
-                            self.ax.autoscale_view()
-                            self.ax2.relim()
-                            self.ax2.autoscale_view()
+                        self.ax.relim()
+                        self.ax.autoscale_view()
+                        self.ax2.relim()
+                        self.ax2.autoscale_view()
 
-                            if not self.ci_filled_once:
-                                self.ax.legend(loc='upper left')
-                                self.ax2.legend(loc='upper right')
-                                self.ci_filled_once = True
+                        if not self.ci_filled_once:
+                            # Combine all lines in one legend at upper left
+                            lines = [self.line, self.temp_line, self.rh_line]
+                            labels = [line.get_label() for line in lines]
+                            self.ax.legend(lines, labels, loc='upper left')
+                            self.ci_filled_once = True
 
-                            plt.draw()
-                    else:
-                        time.sleep(0.1)
-
+                        plt.draw()
         except KeyboardInterrupt:
             print("\nInterrupted by user.")
         finally:
