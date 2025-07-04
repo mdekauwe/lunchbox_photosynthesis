@@ -5,9 +5,9 @@ from collections import deque
 import matplotlib.pyplot as plt
 
 
-def ppm_to_umol_s(delta_ppm_s, volume_liters, temp_k,
+def ppm_to_umol_s(delta_ppm_s, box_volume, temp_k,
                   pressure_pa, gas_constant):
-    volume_m3 = volume_liters / 1000.0
+    volume_m3 = box_volume / 1000.0
     mol_flux = (delta_ppm_s * pressure_pa * volume_m3) / (
         gas_constant * temp_k
     )
