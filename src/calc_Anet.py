@@ -23,7 +23,9 @@ def main(box_volume, leaf_area_cm2, window_size, ofname, override_temp=False,
     time_window = deque(maxlen=window_size)
 
     print("Starting measurements...")
-    write_header = True
+    with open(log_file, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["time", "co2", "temp", "rh", "vpd", "a_net"])
 
     try:
         while True:
@@ -66,10 +68,6 @@ def main(box_volume, leaf_area_cm2, window_size, ofname, override_temp=False,
 
                     with open(ofname, "a", newline="") as f:
                         writer = csv.writer(f)
-                        if write_header:
-                            writer.writerow(["time", "co2", "temp", "rh", "vpd",
-                                             "a_net"])
-                            write_header = False  # Prevent writing header again
                         writer.writerow([now, co2, temp, rh, vpd, a_net])
             else:
                 print(".", end="", flush=True)
