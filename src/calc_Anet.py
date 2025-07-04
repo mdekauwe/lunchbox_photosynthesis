@@ -5,8 +5,7 @@ from collections import deque
 import matplotlib.pyplot as plt
 import csv
 
-def main(box_volume, leaf_area_cm2, window_size, ofname, override_temp=False,
-         override_temp_c=23.0):
+def main(box_volume, leaf_area_cm2, window_size, ofname):
 
     DEG_2_K = 273.15
 
@@ -36,8 +35,6 @@ def main(box_volume, leaf_area_cm2, window_size, ofname, override_temp=False,
                     continue
 
                 temp = sensor.get_temperature()
-                if override_temp: # debugging - take out at some pt...
-                    temp = override_temp_c
                 rh = max(0, min(100, sensor.get_humidity()))
                 vpd = calc_vpd(temp, rh)
                 now = time.time()
@@ -99,4 +96,4 @@ if __name__ == "__main__":
     leaf_area_cm2 = 100.0
     window_size = 20
     ofname = "../outputs/photosynthesis_log.csv"
-    main(box_volume, leaf_area_cm2, window_size, ofname, override_temp=False)
+    main(box_volume, leaf_area_cm2, window_size, ofname)
