@@ -156,8 +156,8 @@ class Photosynthesis:
                         min_len = min(len(self.anet_times),
                                       len(temps), len(rhs))
                         if min_len > 0:
-                            temp_times_rel = [(t - time_window[0]) / 60 \
-                                                for t in times[-min_len:]]
+                            temp_times_rel = [(t - self.anet_times[0]) / 60 \
+                                    for t in list(self.anet_times)[-min_len:]]
 
                             self.temp_line.set_xdata(temp_times_rel)
                             self.temp_line.set_ydata(list(temps)[-min_len:])
