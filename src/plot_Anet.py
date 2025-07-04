@@ -43,10 +43,10 @@ class Photosynthesis:
         self._setup_plot()
 
     @staticmethod
-    def calc_anet(delta_ppm_s,  temp_K):
+    def calc_anet(delta_ppm_s,  temp_K, chamber_volume, pressure_pa):
         RGAS=8.314
-        volume_m3 = self.chamber_volume / 1000.0
-        an_leaf = (delta_ppm_s * self.pressure_pa * volume_m3) / (RGAS * temp_K)
+        volume_m3 = chamber_volume / 1000.0
+        an_leaf = (delta_ppm_s * pressure_pa * volume_m3) / (RGAS * temp_K)
         return an_leaf # umol leaf-1 s-1
 
     @staticmethod
@@ -285,9 +285,15 @@ class Photosynthesis:
                         else:
                             temp_K = 298.15
 
-                        an_leaf = self.calc_anet(corr_slope, temp_K)
-                        an_leaf_u = self.calc_anet(slope_upper, temp_K)
-                        an_leaf_l = self.calc_anet(slope_lower, temp_K)
+                        an_leaf = self.calc_anet(corr_slope, temp_K,
+                                                 self.chamber_volume,
+                                                 self.pressure_pa)
+                        an_leaf_u = self.calc_anet(slope_upper, temp_K,
+                                                   self.chamber_volume,
+                                                   self.pressure_pa)
+                        an_leaf_l = self.calc_anet(slope_lower, temp_K,
+                                                   self.chamber_volume,
+                                                   self.pressure_pa)
 
                         A_net = -an_leaf / leaf_area_m2
                         A_net_u = -an_leaf_u / leaf_area_m2
