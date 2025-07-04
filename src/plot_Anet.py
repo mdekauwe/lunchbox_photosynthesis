@@ -223,7 +223,7 @@ class Photosynthesis:
         # assumes the sensor is in ambient air for at least 1 hour per day.
         # it assumes the lowest CO2 value it sees is 400 ppm and calibrates
         # accordingly
-        self.sensor.set_automatic_self_calibration(False)
+        self.sensor.set_automatic_self_calibration_enabled(False)
 
         print("==Sensor ready. Use buttons to begin zero run or logging.")
 
