@@ -404,6 +404,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 100.0
 
-    logger = Photosynthesis(chamber_volume=1.2, window_size=20, plot_window=300,
+    logger = Photosynthesis(chamber_volume=1.2, window_size=12, plot_window=300,
                             zero_run_duration=30, leaf_area_cm2_init=la)
     logger.run()
