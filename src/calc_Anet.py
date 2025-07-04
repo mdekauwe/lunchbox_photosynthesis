@@ -77,8 +77,8 @@ def calc_anet(delta_ppm_s, box_volume, temp_k):
 
 def calc_vpd(temp_c, rh_percent):
     es = 0.6108 * np.exp((17.27 * temp_c) / (temp_c + 237.3))  # kPa
-    ea = es * (rh_percent / 100.0)
-
+    ea = es * (rh_percent / 100.0) # kPa
+    print(rh_percent)
     return es - ea  # kPa
 
 if __name__ == "__main__":
