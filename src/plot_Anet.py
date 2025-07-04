@@ -121,21 +121,21 @@ class PhotosynthesisLogger:
         self.status_text = self.fig.text(0.5, 0.03, "Status: Idle", ha="center")
 
         ax_zero = plt.axes([0.05, 0.15, 0.25, 0.075])
-        zero_button = Button(ax_zero, 'Start Zero Run')
-        zero_button.on_clicked(self.start_zero_run)
+        self.zero_button = Button(ax_zero, 'Start Zero Run')
+        self.zero_button.on_clicked(self.start_zero_run)
 
         ax_start = plt.axes([0.375, 0.15, 0.25, 0.075])
-        start_button = Button(ax_start, 'Start Logging')
-        start_button.on_clicked(self.start_logging)
+        self.start_button = Button(ax_start, 'Start Logging')
+        self.start_button.on_clicked(self.start_logging)
 
         ax_stop = plt.axes([0.7, 0.15, 0.25, 0.075])
-        stop_button = Button(ax_stop, 'Stop Logging')
-        stop_button.on_clicked(self.stop_logging)
+        self.stop_button = Button(ax_stop, 'Stop Logging')
+        self.stop_button.on_clicked(self.stop_logging)
 
         ax_text = plt.axes([0.05, 0.03, 0.25, 0.05])
-        text_box = TextBox(ax_text, "Leaf Area (cm²)",
-                           initial=str(self.leaf_area_cm2))
-        text_box.on_submit(self.update_leaf_area)
+        self.text_box = TextBox(ax_text, "Leaf Area (cm²)",
+                               initial=str(self.leaf_area_cm2))
+        self.text_box.on_submit(self.update_leaf_area)
 
         self.ax.legend(loc='upper left')
         self.ax2.legend(loc='upper right')
