@@ -98,5 +98,5 @@ if __name__ == "__main__":
     box_volume = 1.2 # litres
     leaf_area_cm2 = 100.0
     window_size = 20
-    ofname = "..outputs/photosynthesis_log.csv"
+    ofname = "../outputs/photosynthesis_log.csv"
     main(box_volume, leaf_area_cm2, window_size, ofname, override_temp=False)
