@@ -43,9 +43,9 @@ class PhotosynthesisLogger:
         self._setup_plot()
 
     @staticmethod
-    def ppm_to_umol_s(delta_ppm_s, box_volume, temp_K, pressure_pa, R=8.314):
+    def ppm_to_umol_s(delta_ppm_s, box_volume, temp_K, pressure_pa, RGAS=8.314):
         volume_m3 = box_volume / 1000.0
-        mol_flux = (delta_ppm_s * pressure_pa * volume_m3) / (R * temp_K)
+        mol_flux = (delta_ppm_s * pressure_pa * volume_m3) / (RGAS * temp_K)
         return mol_flux
 
     @staticmethod

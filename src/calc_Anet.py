@@ -6,15 +6,14 @@ import matplotlib.pyplot as plt
 
 
 def ppm_to_umol_s(delta_ppm_s, box_volume, temp_k,
-                  pressure_pa, gas_constant):
+                  pressure_pa, RGAS=8.314):
     volume_m3 = box_volume / 1000.0
-    mol_flux = (delta_ppm_s * pressure_pa * volume_m3) / (gas_constant * temp_k)
+    mol_flux = (delta_ppm_s * pressure_pa * volume_m3) / (RGAS * temp_k)
     return mol_flux
 
 
-def main(chamber_volume_liters, leaf_area_cm2, window_size):
+def main(box_volume, leaf_area_cm2, window_size):
     pressure_pa = 101325
-    gas_constant = 8.314
 
     sensor = qwiic_scd4x.QwiicSCD4x()
     if not sensor.is_connected():
@@ -56,13 +55,8 @@ def main(chamber_volume_liters, leaf_area_cm2, window_size):
                     temp_k = temp + 273.15
                     leaf_area_m2 = leaf_area_cm2 / 10000.0
 
-                    mol_flux = ppm_to_umol_s(
-                        slope,
-                        chamber_volume_liters,
-                        temp_k,
-                        pressure_pa,
-                        gas_constant
-                    )
+                    mol_flux = ppm_to_umol_s(slope, box_volume,
+                                             temp_k, pressure_pa)
 
                     a_net = -mol_flux / leaf_area_m2
 
@@ -82,8 +76,8 @@ def main(chamber_volume_liters, leaf_area_cm2, window_size):
 
 
 if __name__ == "__main__":
-    chamber_volume_liters = 1.2
+    box_volume = 1.2
     leaf_area_cm2 = 100.0
     window_size = 6
 
-    main(chamber_volume_liters, leaf_area_cm2, window_size)
+    main(box_volume, leaf_area_cm2, window_size)
