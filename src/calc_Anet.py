@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
          override_temp_c=23.0):
 
-    pressure_pa = 101325.
+    DEG_2_K = 273.15
 
     sensor = qwiic_scd4x.QwiicSCD4x()
     if not sensor.is_connected():
@@ -29,7 +29,7 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
             if sensor.read_measurement():
                 co2 = sensor.get_co2()
                 temp = sensor.get_temperature()
-                if override_temp:
+                if override_temp: # debugging - take out at some pt...
                     temp = override_temp_c
                 rh = sensor.get_humidity()
                 now = time.time()
@@ -46,9 +46,9 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
                     times = np.array(time_window)
                     co2s = np.array(co2_window)
                     slope, _ = np.polyfit(times - times[0], co2s, 1)  # ppm/s
-                    temp_k = temp + 273.15
+                    temp_k = temp + DEG_2_K
                     leaf_area_m2 = leaf_area_cm2 / 10000.0
-                    an_leaf = calc_anet(slope, box_volume, temp_k, pressure_pa)
+                    an_leaf = calc_anet(slope, box_volume, temp_k)
                     a_net = -an_leaf / leaf_area_m2 # umol m-2 s-1
 
                     print(
@@ -65,18 +65,18 @@ def main(box_volume, leaf_area_cm2, window_size, override_temp=False,
     except KeyboardInterrupt:
         print("\nStopping measurements.")
 
-def calc_anet(delta_ppm_s, box_volume, temp_k, pressure_pa):
-
-    RGAS = 8.314
+def calc_anet(delta_ppm_s, box_volume, temp_k):
+    pressure_pa = 101325.
+    rgas = 8.314 # J K−1 mol−1
     volume_m3 = box_volume / 1000.0
-    an_leaf = (delta_ppm_s * pressure_pa * volume_m3) / (RGAS * temp_k)
+    an_leaf = (delta_ppm_s * pressure_pa * volume_m3) / (rgas * temp_k)
 
     return an_leaf # umol leaf-1 s-1
 
 
 if __name__ == "__main__":
 
-    box_volume = 1.2
+    box_volume = 1.2 # litres
     leaf_area_cm2 = 100.0
     window_size = 20
 

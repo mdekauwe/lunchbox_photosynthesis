@@ -229,6 +229,9 @@ class Photosynthesis:
                 time.sleep(0.1)
 
     def run(self):
+
+        DEG_2_K = 273.15
+        
         thread = threading.Thread(target=self.sensor_thread, daemon=True)
         thread.start()
 
@@ -283,7 +286,7 @@ class Photosynthesis:
                         slope_lower = corr_slope - 1.96 * stderr
 
                         if len(temps) > 0:
-                            temp_K = temps[-1] + 273.15
+                            temp_K = temps[-1] + DEG_2_K
                         else:
                             temp_K = 298.15
 
@@ -382,7 +385,7 @@ class Photosynthesis:
 if __name__ == "__main__":
 
     import argparse
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--leaf_area', type=float,
                         help='Initial leaf area in cm²')
