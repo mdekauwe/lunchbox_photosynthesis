@@ -48,10 +48,11 @@ def main(box_volume, leaf_area_cm2, window_size):
                 if len(co2_window) >= 3:
                     times = np.array(time_window)
                     co2s = np.array(co2_window)
-                    slope, _ = np.polyfit(
-                        times - times[0], co2s, 1
-                    )  # ppm/s
+                    slope, _ = np.polyfit(times - times[0], co2s, 1)  # ppm/s
 
+                    print(times)
+                    print(co2s)
+                    import sys; sys.exit()
                     temp_k = temp + 273.15
                     leaf_area_m2 = leaf_area_cm2 / 10000.0
 
