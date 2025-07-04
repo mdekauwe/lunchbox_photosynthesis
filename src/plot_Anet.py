@@ -263,9 +263,9 @@ class Photosynthesis:
         self.stop_button = Button(ax_stop, 'Stop Logging')
         self.stop_button.on_clicked(self.stop_logging)
 
-        ax_text = plt.axes([0.05, 0.03, 0.25, 0.05])
-        self.text_box = TextBox(ax_text, "Leaf Area (cm²)",
-                                initial=str(self.leaf_area_cm2[0]))
+        self.fig.text(0.05, 0.10, "Leaf Area (cm²)", ha="left", va="bottom")
+        ax_text = plt.axes([0.05, 0.05, 0.25, 0.05])
+        self.text_box = TextBox(ax_text, "", initial=str(self.leaf_area_cm2[0]))
         self.text_box.on_submit(self.update_leaf_area)
 
     def update_leaf_area(self, text):
@@ -305,7 +305,7 @@ class Photosynthesis:
             self.logging_started = True
         print(f"\nLogging started. Leaf area = {self.leaf_area_cm2[0]:.1f} cm²")
         self.status_text.set_text(
-            f"Status: Logging... (Leaf = {self.leaf_area_cm2[0]:.1f} cm²)")
+            f"  Status: Logging... ")
         plt.draw()
 
     def stop_logging(self, event):
