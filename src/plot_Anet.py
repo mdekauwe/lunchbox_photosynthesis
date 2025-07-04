@@ -42,6 +42,153 @@ class Photosynthesis:
         self._setup_sensor()
         self._setup_plot()
 
+    def run(self):
+
+        DEG_2_K = 273.15
+
+        thread = threading.Thread(target=self.sensor_thread, daemon=True)
+        thread.start()
+
+        try:
+            while not self.stop_requested:
+                plt.pause(0.05)
+                with self.lock:
+                    logging = self.logging_started
+                    zero_run = self.zero_run_started
+                    co2_data = (self.co2_window.copy(),
+                                self.time_window.copy(),
+                                self.temp_values.copy(),
+                                self.rh_values.copy(),
+                                self.window_filled,
+                                self.window_index)
+                    anet_times = list(self.anet_times)
+                    anet_values = list(self.anet_values)
+                    anet_upper = list(self.anet_upper)
+                    anet_lower = list(self.anet_lower)
+                    zero_slope = self.zero_slope
+                    leaf_area_m2 = self.leaf_area_cm2[0] / 10000.0
+
+                if zero_run:
+                    continue
+
+                if logging:
+                    (co2_window, time_window, temp_vals,
+                     rh_vals, filled, idx) = co2_data
+
+                    if filled:
+                        times = time_window
+                        co2s = co2_window
+                        temps = temp_vals
+                        rhs = rh_vals
+                    else:
+                        times = time_window[:idx]
+                        co2s = co2_window[:idx]
+                        temps = temp_vals[:idx]
+                        rhs = rh_vals[:idx]
+
+                    valid_mask = (~np.isnan(times)) & (~np.isnan(co2s))
+                    times = times[valid_mask]
+                    co2s = co2s[valid_mask]
+
+                    if len(co2s) >= self.window_size:
+                        res = linregress(times - times[0], co2s)
+                        slope = res.slope
+                        stderr = res.stderr or 0.0
+
+                        corr_slope = slope - zero_slope
+                        slope_upper = corr_slope + 1.96 * stderr
+                        slope_lower = corr_slope - 1.96 * stderr
+
+                        if len(temps) > 0:
+                            temp_K = temps[-1] + DEG_2_K
+                        else:
+                            temp_K = 298.15
+
+                        an_leaf = self.calc_anet(corr_slope, temp_K,
+                                                 self.chamber_volume,
+                                                 self.pressure_pa)
+                        an_leaf_u = self.calc_anet(slope_upper, temp_K,
+                                                   self.chamber_volume,
+                                                   self.pressure_pa)
+                        an_leaf_l = self.calc_anet(slope_lower, temp_K,
+                                                   self.chamber_volume,
+                                                   self.pressure_pa)
+
+                        A_net = -an_leaf / leaf_area_m2
+                        A_net_u = -an_leaf_u / leaf_area_m2
+                        A_net_l = -an_leaf_l / leaf_area_m2
+
+                        print(
+                            f"ΔCO₂: {corr_slope:+.4f} ± {1.96*stderr:.4f} | "
+                            f"A_net: {A_net:+.2f}"
+                        )
+                        print("-" * 40)
+
+                        now = time.time()
+                        with self.lock:
+                            self.anet_times.append(now)
+                            self.anet_values.append(A_net)
+                            self.anet_upper.append(A_net_u)
+                            self.anet_lower.append(A_net_l)
+
+                            while (self.anet_times and
+                                   (now - self.anet_times[0]) > \
+                                    self.plot_window):
+                                self.anet_times.popleft()
+                                self.anet_values.popleft()
+                                self.anet_upper.popleft()
+                                self.anet_lower.popleft()
+
+                        times_rel = [(t - self.anet_times[0]) / 60
+                                     for t in self.anet_times]
+                        self.line.set_xdata(times_rel)
+                        self.line.set_ydata(self.anet_values)
+
+                        if self.ci_fill:
+                            self.ci_fill.remove()
+
+                        self.ci_fill = self.ax.fill_between(
+                            times_rel,
+                            list(self.anet_lower),
+                            list(self.anet_upper),
+                            color='seagreen', alpha=0.3)
+
+                        min_len = min(len(self.anet_times),
+                                      len(temps), len(rhs))
+                        if min_len > 0:
+                            temp_times_rel = [(t - time_window[0]) / 60 \
+                                                for t in times[-min_len:]]
+
+                            self.temp_line.set_xdata(temp_times_rel)
+                            self.temp_line.set_ydata(list(temps)[-min_len:])
+
+                            self.rh_line.set_xdata(temp_times_rel)
+                            self.rh_line.set_ydata(list(rhs)[-min_len:])
+                        else:
+                            self.temp_line.set_xdata([])
+                            self.temp_line.set_ydata([])
+                            self.rh_line.set_xdata([])
+                            self.rh_line.set_ydata([])
+
+                        self.ax.relim()
+                        self.ax.autoscale_view()
+                        self.ax2.relim()
+                        self.ax2.autoscale_view()
+
+                        if not self.ci_filled_once:
+                            lines = [self.line, self.temp_line, self.rh_line]
+                            labels = [line.get_label() for line in lines]
+                            self.ax.legend(lines, labels, loc='upper left')
+                            self.ci_filled_once = True
+
+                        plt.draw()
+        except KeyboardInterrupt:
+            print("\nInterrupted by user.")
+        finally:
+            plt.ioff()
+            plt.show()
+            print("Exited cleanly.")
+
     @staticmethod
     def calc_anet(delta_ppm_s, temp_K, chamber_volume, pressure_pa):
         RGAS = 8.314
@@ -237,153 +384,6 @@ class Photosynthesis:
                     time.sleep(0.1)
             else:
                 time.sleep(0.1)
-
-    def run(self):
-
-        DEG_2_K = 273.15
-
-        thread = threading.Thread(target=self.sensor_thread, daemon=True)
-        thread.start()
-
-        try:
-            while not self.stop_requested:
-                plt.pause(0.05)
-                with self.lock:
-                    logging = self.logging_started
-                    zero_run = self.zero_run_started
-                    co2_data = (self.co2_window.copy(),
-                                self.time_window.copy(),
-                                self.temp_values.copy(),
-                                self.rh_values.copy(),
-                                self.window_filled,
-                                self.window_index)
-                    anet_times = list(self.anet_times)
-                    anet_values = list(self.anet_values)
-                    anet_upper = list(self.anet_upper)
-                    anet_lower = list(self.anet_lower)
-                    zero_slope = self.zero_slope
-                    leaf_area_m2 = self.leaf_area_cm2[0] / 10000.0
-
-                if zero_run:
-                    continue
-
-                if logging:
-                    (co2_window, time_window, temp_vals,
-                     rh_vals, filled, idx) = co2_data
-
-                    if filled:
-                        times = time_window
-                        co2s = co2_window
-                        temps = temp_vals
-                        rhs = rh_vals
-                    else:
-                        times = time_window[:idx]
-                        co2s = co2_window[:idx]
-                        temps = temp_vals[:idx]
-                        rhs = rh_vals[:idx]
-
-                    valid_mask = (~np.isnan(times)) & (~np.isnan(co2s))
-                    times = times[valid_mask]
-                    co2s = co2s[valid_mask]
-
-                    if len(co2s) >= self.window_size:
-                        res = linregress(times - times[0], co2s)
-                        slope = res.slope
-                        stderr = res.stderr or 0.0
-
-                        corr_slope = slope - zero_slope
-                        slope_upper = corr_slope + 1.96 * stderr
-                        slope_lower = corr_slope - 1.96 * stderr
-
-                        if len(temps) > 0:
-                            temp_K = temps[-1] + DEG_2_K
-                        else:
-                            temp_K = 298.15
-
-                        an_leaf = self.calc_anet(corr_slope, temp_K,
-                                                 self.chamber_volume,
-                                                 self.pressure_pa)
-                        an_leaf_u = self.calc_anet(slope_upper, temp_K,
-                                                   self.chamber_volume,
-                                                   self.pressure_pa)
-                        an_leaf_l = self.calc_anet(slope_lower, temp_K,
-                                                   self.chamber_volume,
-                                                   self.pressure_pa)
-
-                        A_net = -an_leaf / leaf_area_m2
-                        A_net_u = -an_leaf_u / leaf_area_m2
-                        A_net_l = -an_leaf_l / leaf_area_m2
-
-                        print(
-                            f"ΔCO₂: {corr_slope:+.4f} ± {1.96*stderr:.4f} | "
-                            f"A_net: {A_net:+.2f}"
-                        )
-                        print("-" * 40)
-
-                        now = time.time()
-                        with self.lock:
-                            self.anet_times.append(now)
-                            self.anet_values.append(A_net)
-                            self.anet_upper.append(A_net_u)
-                            self.anet_lower.append(A_net_l)
-
-                            while (self.anet_times and
-                                   (now - self.anet_times[0]) > \
-                                    self.plot_window):
-                                self.anet_times.popleft()
-                                self.anet_values.popleft()
-                                self.anet_upper.popleft()
-                                self.anet_lower.popleft()
-
-                        times_rel = [(t - self.anet_times[0]) / 60
-                                     for t in self.anet_times]
-                        self.line.set_xdata(times_rel)
-                        self.line.set_ydata(self.anet_values)
-
-                        if self.ci_fill:
-                            self.ci_fill.remove()
-
-                        self.ci_fill = self.ax.fill_between(
-                            times_rel,
-                            list(self.anet_lower),
-                            list(self.anet_upper),
-                            color='seagreen', alpha=0.3)
-
-                        min_len = min(len(self.anet_times),
-                                      len(temps), len(rhs))
-                        if min_len > 0:
-                            temp_times_rel = [(t - time_window[0]) / 60 \
-                                                for t in times[-min_len:]]
-
-                            self.temp_line.set_xdata(temp_times_rel)
-                            self.temp_line.set_ydata(list(temps)[-min_len:])
-
-                            self.rh_line.set_xdata(temp_times_rel)
-                            self.rh_line.set_ydata(list(rhs)[-min_len:])
-                        else:
-                            self.temp_line.set_xdata([])
-                            self.temp_line.set_ydata([])
-                            self.rh_line.set_xdata([])
-                            self.rh_line.set_ydata([])
-
-                        self.ax.relim()
-                        self.ax.autoscale_view()
-                        self.ax2.relim()
-                        self.ax2.autoscale_view()
-
-                        if not self.ci_filled_once:
-                            lines = [self.line, self.temp_line, self.rh_line]
-                            labels = [line.get_label() for line in lines]
-                            self.ax.legend(lines, labels, loc='upper left')
-                            self.ci_filled_once = True
-
-                        plt.draw()
-        except KeyboardInterrupt:
-            print("\nInterrupted by user.")
-        finally:
-            plt.ioff()
-            plt.show()
-            print("Exited cleanly.")
 
 
 if __name__ == "__main__":
