@@ -343,14 +343,18 @@ class Photosynthesis:
 
                     if elapsed >= self.zero_run_duration:
                         with self.lock:
-                            if len(self.zero_data_co2) >= 3:
+                            if len(self.zero_data_co2) >= self.window_size:
                                 times_np = np.array(self.zero_data_times)
                                 co2_np = np.array(self.zero_data_co2)
                                 slope, _ = np.polyfit(times_np - times_np[0],
                                                      co2_np, 1)
-                                self.zero_slope = slope
-                                print(f"Zero run complete: \
-                                      {slope:.4f} μmol mol⁻¹ s⁻¹")
+                                if abs(slope) > 0.05:  # trust threshold
+                                    print(f"Warning: large zero slope = \
+                                            {slope:.4f}, ignoring correction.")
+                                    self.zero_slope = 0.0
+                                else:
+                                    print(f"Zero slope accepted = {slope:.4f}")
+                                    self.zero_slope = slope
                             else:
                                 self.zero_slope = 0.0
                                 print("Not enough zero-run data.")
