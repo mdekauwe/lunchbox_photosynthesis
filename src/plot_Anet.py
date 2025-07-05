@@ -326,7 +326,7 @@ class Photosynthesis:
                 if self.sensor.read_measurement():
                     co2 = self.sensor.get_co2()
                     temp = self.sensor.get_temperature()
-                    rh = max(0, min(100, sensor.get_humidity()))
+                    rh = max(0, min(100, self.sensor.get_humidity()))
                     co2_dry = self.compute_co2_dry(co2, rh, temp,
                                                    self.pressure_pa)
                     now = time.time()
