@@ -343,26 +343,26 @@ class Photosynthesis:
 
                     if elapsed >= self.zero_run_duration:
                         with self.lock:
-                            if len(self.zero_data_co2) >= self.window_size:
-                                times_np = np.array(self.zero_data_times)
-                                co2_np = np.array(self.zero_data_co2)
-                                slope, _ = np.polyfit(times_np - times_np[0],
-                                                     co2_np, 1)
-                                if abs(slope) > 0.05:  # trust threshold
-                                    print(f"Warning: large zero slope = \
-                                            {slope:.4f}, ignoring correction.")
-                                    self.zero_slope = 0.0
-                                else:
-                                    print(f"Zero slope accepted = {slope:.4f}")
-                                    self.zero_slope = slope
-                            else:
+                            if len(self.zero_data_co2) < self.window_size:
+                                print(f"Only {len(self.zero_data_co2)} zero points. Waiting for more...")
+                                self.zero_run_duration += 6  # extend by 6s (sampling interval)
+                                continue  # go back to collecting more data
+
+                            times_np = np.array(self.zero_data_times)
+                            co2_np = np.array(self.zero_data_co2)
+                            slope, _ = np.polyfit(times_np - times_np[0], co2_np, 1)
+                            if abs(slope) > 0.05:
+                                print(f"Warning: large zero slope = {slope:.4f}, ignoring correction.")
                                 self.zero_slope = 0.0
-                                print("Not enough zero-run data.")
+                            else:
+                                print(f"Zero slope accepted = {slope:.4f}")
+                                self.zero_slope = slope
+
                             self.zero_data_times.clear()
                             self.zero_data_co2.clear()
                             self.zero_run_started = False
                             self.status_text.set_text("Status: Zero run complete")
-                        plt.draw()
+                            plt.draw()
                 time.sleep(6.0)
                 continue
 
