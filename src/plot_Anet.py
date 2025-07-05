@@ -41,7 +41,7 @@ class Photosynthesis:
         self.lock = threading.Lock()
         self._setup_sensor()
         self._setup_plot()
-
+        self.zero_status_dots = 0  
     def run(self):
 
         DEG_2_K = 273.15
@@ -336,40 +336,40 @@ class Photosynthesis:
                         self.zero_data_co2.append(co2_dry)
 
                     elapsed = now - self.zero_data_times[0]
-                    self.status_text.set_text(
-                        f"Zero run: {int(elapsed)} / {self.zero_run_duration}s"
-                    )
+                    self.zero_status_dots = (self.zero_status_dots + 1) % 4
+                    dots = '.' * self.zero_status_dots
+                    self.status_text.set_text(f"Status: Zero run running{dots}")
                     plt.draw()
 
                     if elapsed >= self.zero_run_duration:
+                        enough_data = False
                         with self.lock:
                             if len(self.zero_data_co2) < self.window_size:
-                                print(f"Only {len(self.zero_data_co2)} \
-                                        zero points. Waiting for more...")
-                                # extend by 6s (sampling interval)
+                                print(f"Only {len(self.zero_data_co2)} zero points. Waiting for more...")
                                 self.zero_run_duration += 6
-                                continue  # collect more data
-
-                            times_np = np.array(self.zero_data_times)
-                            co2_np = np.array(self.zero_data_co2)
-                            slope, _ = np.polyfit(times_np - times_np[0],
-                                                  co2_np, 1)
-                            if abs(slope) > 0.05:
-                                print(f"Warning: large zero slope = \
-                                        {slope:.4f}, ignoring correction.")
-                                self.zero_slope = 0.0
+                                enough_data = False
                             else:
-                                print(f"Zero slope accepted = {slope:.4f}")
-                                self.zero_slope = slope
+                                times_np = np.array(self.zero_data_times)
+                                co2_np = np.array(self.zero_data_co2)
+                                slope, _ = np.polyfit(times_np - times_np[0], co2_np, 1)
+                                if abs(slope) > 0.05:
+                                    print(f"Warning: large zero slope = {slope:.4f}, ignoring correction.")
+                                    self.zero_slope = 0.0
+                                else:
+                                    print(f"Zero slope accepted = {slope:.4f}")
+                                    self.zero_slope = slope
 
-                            self.zero_data_times.clear()
-                            self.zero_data_co2.clear()
-                            self.zero_run_started = False
-                            self.status_text.set_text("Status: Zero run \
-                                                        complete")
-                            plt.draw()
-                time.sleep(6.0)
-                continue
+                                self.zero_data_times.clear()
+                                self.zero_data_co2.clear()
+                                self.zero_run_started = False
+                                self.status_text.set_text("Status: Zero run complete")
+                                plt.draw()
+                                enough_data = True
+
+                        if not enough_data:
+                            time.sleep(6.0)
+                            continue
+
 
             if logging:
                 if self.sensor.read_measurement():
