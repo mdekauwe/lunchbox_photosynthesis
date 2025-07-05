@@ -344,15 +344,19 @@ class Photosynthesis:
                     if elapsed >= self.zero_run_duration:
                         with self.lock:
                             if len(self.zero_data_co2) < self.window_size:
-                                print(f"Only {len(self.zero_data_co2)} zero points. Waiting for more...")
-                                self.zero_run_duration += 6  # extend by 6s (sampling interval)
-                                continue  # go back to collecting more data
+                                print(f"Only {len(self.zero_data_co2)} \
+                                        zero points. Waiting for more...")
+                                # extend by 6s (sampling interval)
+                                self.zero_run_duration += 6
+                                continue  # collect more data
 
                             times_np = np.array(self.zero_data_times)
                             co2_np = np.array(self.zero_data_co2)
-                            slope, _ = np.polyfit(times_np - times_np[0], co2_np, 1)
+                            slope, _ = np.polyfit(times_np - times_np[0],
+                                                  co2_np, 1)
                             if abs(slope) > 0.05:
-                                print(f"Warning: large zero slope = {slope:.4f}, ignoring correction.")
+                                print(f"Warning: large zero slope = \
+                                        {slope:.4f}, ignoring correction.")
                                 self.zero_slope = 0.0
                             else:
                                 print(f"Zero slope accepted = {slope:.4f}")
@@ -361,7 +365,8 @@ class Photosynthesis:
                             self.zero_data_times.clear()
                             self.zero_data_co2.clear()
                             self.zero_run_started = False
-                            self.status_text.set_text("Status: Zero run complete")
+                            self.status_text.set_text("Status: Zero run \
+                                                        complete")
                             plt.draw()
                 time.sleep(6.0)
                 continue
