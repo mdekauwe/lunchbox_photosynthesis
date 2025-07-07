@@ -296,8 +296,7 @@ class Photosynthesis:
     def toggle_dry_co2(self, label):
         with self.lock:
             self.use_dry_co2 = not self.use_dry_co2
-        print(f"Dry CO₂ correction {'enabled' if \
-                self.use_dry_co2 else 'disabled'}")
+        print(f"Dry CO₂ correction {'enabled' if self.use_dry_co2 else 'disabled'}")
 
     def update_leaf_area(self, text):
         try:
