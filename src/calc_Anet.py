@@ -108,10 +108,16 @@ def calc_vpd(temp_c, rh_percent):
 
 if __name__ == "__main__":
 
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Lunchbox photosynthesis logger")
+    parser.add_argument("--recalibrate", action="store_true",
+                        help="Force manual recalibration to 420 ppm\
+                                before starting measurements")
+    args = parser.parse_args()
+
     box_volume = 1.2  # litres
     leaf_area_cm2 = 100.0
     window_size = 12
     ofname = "../outputs/photosynthesis_log.csv"
-
-    force_recalibrate = True
-    main(box_volume, leaf_area_cm2, window_size, ofname, force_recalibrate)
+    main(box_volume, leaf_area_cm2, window_size, ofname, args.recalibrate)
