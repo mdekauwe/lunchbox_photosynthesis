@@ -95,7 +95,7 @@ class Photosynthesis:
                         if self.use_dry_co2:
                             co2s = self.dry_co2_window
                         else:
-                            co2s = co2_window)[:idx]
+                            co2s = co2_window[:idx]
                         temps = temp_vals[:idx]
                         rhs = rh_vals[:idx]
 
