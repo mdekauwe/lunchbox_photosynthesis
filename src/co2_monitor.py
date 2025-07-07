@@ -27,7 +27,7 @@ def main():
                 )
                 time.sleep(2)  # Adjust delay as needed
             else:
-                time.sleep(2.0)
+                time.sleep(1)
 
     except KeyboardInterrupt:
         print("\nExiting sensor reader.")
