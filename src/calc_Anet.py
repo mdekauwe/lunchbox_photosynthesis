@@ -21,8 +21,9 @@ def main(box_volume, leaf_area_cm2, window_size, ofname, force_recalibrate):
         print("Error while initializing sensor")
         return
 
-    # Disable automatic self-calibration
-    sensor.set_automatic_self_calibration_enabled(False)
+    # Enables automatic self-calibration of CO2, turn off (False) to stop
+    # it doing this
+    sensor.set_automatic_self_calibration_enabled(True)
 
     if force_recalibrate:
         print("\n** Waiting 5 mins for sensor to adjust in ambient air... **")
