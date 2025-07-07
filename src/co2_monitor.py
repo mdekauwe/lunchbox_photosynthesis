@@ -14,6 +14,8 @@ def main():
 
     print("Reading data from SCD40 sensor...\n")
 
+    start_time = time.time()
+
     try:
         while True:
             if sensor.read_measurement():
@@ -21,9 +23,12 @@ def main():
                 temp = sensor.get_temperature()
                 rh = sensor.get_humidity()
 
+                elapsed_sec = int(time.time() - start_time)
+                minutes, seconds = divmod(elapsed_sec, 60)
+                
                 print(
-                    f"CO₂: {co2:.1f} μmol mol⁻¹ | Temp: {temp:.1f} °C | "
-                    f"RH: {rh:.1f} %"
+                    f"[{minutes:02d}:{seconds:02d}] CO₂: {co2:.1f} μmol mol⁻¹ |"
+                    f"Temp: {temp:.1f} °C | RH: {rh:.1f} %"
                 )
                 time.sleep(2)  # Adjust delay as needed
             else:
