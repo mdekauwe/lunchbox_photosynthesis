@@ -6,7 +6,7 @@ from collections import deque
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Button, TextBox
+from matplotlib.widgets import Button, TextBox, CheckButtons
 from scipy.stats import linregress
 
 
@@ -45,6 +45,8 @@ class Photosynthesis:
         # There seems to be an issue when in the light, the temp sensor
         # measures a very high value, allow the user to override this
         self.manual_temp_c = None
+        self.use_dry_co2 = False
+        self.dry_co2_window = np.full(window_size, np.nan)
 
     def run(self):
 
@@ -82,12 +84,18 @@ class Photosynthesis:
 
                     if filled:
                         times = time_window
-                        co2s = co2_window
+                        if self.use_dry_co2:
+                            co2s = self.dry_co2_window
+                        else:
+                            co2s = co2_window
                         temps = temp_vals
                         rhs = rh_vals
                     else:
                         times = time_window[:idx]
-                        co2s = co2_window[:idx]
+                        if self.use_dry_co2:
+                            co2s = self.dry_co2_window
+                        else:
+                            co2s = co2_window)[:idx]
                         temps = temp_vals[:idx]
                         rhs = rh_vals[:idx]
 
@@ -280,6 +288,17 @@ class Photosynthesis:
         self.temp_box = TextBox(ax_temp, "", initial="")
         self.temp_box.on_submit(self.update_manual_temp)
 
+        self.fig.text(0.7, 0.10, "Use Dry CO₂", ha="left", va="bottom")
+        ax_check = plt.axes([0.7, 0.05, 0.25, 0.05])
+        self.dry_co2_check = CheckButtons(ax_check, ['Enable'], [False])
+        self.dry_co2_check.on_clicked(self.toggle_dry_co2)
+
+    def toggle_dry_co2(self, label):
+        with self.lock:
+            self.use_dry_co2 = not self.use_dry_co2
+        print(f"Dry CO₂ correction {'enabled' if \
+                self.use_dry_co2 else 'disabled'}")
+
     def update_leaf_area(self, text):
         try:
             value = float(text)
@@ -413,7 +432,8 @@ class Photosynthesis:
 
                     with self.lock:
                         idx = self.window_index
-                        self.co2_window[idx] = co2_dry
+                        self.co2_window[idx] = co2          # store wet CO2
+                        self.dry_co2_window[idx] = co2_dry  # store dry CO2
                         self.time_window[idx] = now
                         self.temp_values[idx] = temp
                         self.rh_values[idx] = rh
