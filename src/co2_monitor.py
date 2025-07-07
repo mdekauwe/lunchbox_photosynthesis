@@ -5,10 +5,6 @@ def main():
 
     sensor = qwiic_scd4x.QwiicSCD4x()
 
-    # Enables automatic self-calibration of CO2, turn off (False) to stop
-    # it doing this
-    sensor.set_automatic_self_calibration_enabled(True)
-    
     if not sensor.is_connected():
         print("Sensor not connected. Check wiring and power.")
         return
@@ -17,6 +13,11 @@ def main():
         print("Sensor initialization failed.")
         return
 
+    # Enables automatic self-calibration of CO2, turn off (False) to stop
+    # it doing this
+    sensor.set_automatic_self_calibration_enabled(True)
+
+    
     print("Reading data from SCD40 sensor...\n")
 
     start_time = time.time()
