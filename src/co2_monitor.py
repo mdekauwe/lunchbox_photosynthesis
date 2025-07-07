@@ -30,12 +30,10 @@ def main():
     fig, ax = plt.subplots()
     co2_data = deque(maxlen=300)
     time_data = deque(maxlen=300)
-    line, = ax.plot([], [], label="CO₂ (ppm)")
+    line, = ax.plot([], [])
     ax.set_xlabel("Time (min)")
     ax.set_ylabel("CO₂ (μmol mol⁻¹)")
-    ax.set_title("Live CO₂ Readout")
     ax.grid(True)
-    ax.legend()
 
     try:
         while True:
