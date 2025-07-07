@@ -240,7 +240,8 @@ class Photosynthesis:
         # it assumes the lowest CO2 value it sees is 400 ppm and calibrates
         # accordingly
         self.sensor.set_automatic_self_calibration_enabled(False)
-
+        self.sensor.perform_forced_recalibration(420)
+        
         print("==Sensor ready. Use buttons to begin zero run or logging.")
 
     def _setup_plot(self):
