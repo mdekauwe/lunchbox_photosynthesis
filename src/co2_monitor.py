@@ -36,9 +36,9 @@ def main():
                     f"[{minutes:02d}:{seconds:02d}] CO₂: {co2:.1f} μmol mol⁻¹ |"
                     f"Temp: {temp:.1f} °C | RH: {rh:.1f} %"
                 )
-                time.sleep(1)  # Adjust delay as needed
+                time.sleep(2)
             else:
-                time.sleep(1)
+                time.sleep(0.2)
 
     except KeyboardInterrupt:
         print("\nExiting sensor reader.")
