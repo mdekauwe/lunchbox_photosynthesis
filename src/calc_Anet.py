@@ -6,10 +6,10 @@ from collections import deque
 import csv
 
 
-def main(box_volume, leaf_area_cm2, window_size, ofname):
+
+def main(box_volume, leaf_area_cm2, window_size, ofname, force_recalibrate):
 
     DEG_2_K = 273.15
-
     leaf_area_m2 = leaf_area_cm2 / 10000.0
 
     sensor = qwiic_scd4x.QwiicSCD4x()
@@ -21,17 +21,20 @@ def main(box_volume, leaf_area_cm2, window_size, ofname):
         print("Error while initializing sensor")
         return
 
-    co2_window = deque(maxlen=window_size)
-    time_window = deque(maxlen=window_size)
-
-    # Disable auto self-calibration
-    # The SCD40 performs automatic self-calibration by default, which
-    # assumes the sensor is in ambient air for at least 1 hour per day.
-    # it assumes the lowest CO2 value it sees is 400 ppm and calibrates
-    # accordingly
+    # Disable automatic self-calibration
     sensor.set_automatic_self_calibration_enabled(False)
 
+    if force_recalibrate:
+        print("\n[INFO] Waiting 5 mins for sensor to adjust in ambient air...")
+        time.sleep(300)  # wait 5 minutes
+        print("[INFO] Performing manual calibration to 400 ppm...")
+        result = sensor.perform_forced_recalibration(400)
+        print(f"[INFO] Calibration result: {result} ppm offset applied\n")
+
     print("Starting measurements...")
+
+    co2_window = deque(maxlen=window_size)
+    time_window = deque(maxlen=window_size)
 
     with open(ofname, "w", newline="") as f:
         writer = csv.writer(f)
@@ -59,7 +62,7 @@ def main(box_volume, leaf_area_cm2, window_size, ofname):
 
                     print(
                         f"CO₂: {co2:.1f} μmol mol⁻¹ | Temp: {temp:.1f} °C | "
-                        f"RH: {rh:.1f} % | VPD: {vpd:.1f} kPa"
+                        f"RH: {rh:.1f} % | VPD: {vpd:.2f} kPa"
                     )
 
                     if len(co2_window) >= window_size:
@@ -88,19 +91,19 @@ def main(box_volume, leaf_area_cm2, window_size, ofname):
         except KeyboardInterrupt:
             print("\nStopping measurements.")
 
-def calc_anet(delta_ppm_s, box_volume, temp_k):
-    pressure = 101325. # Pa
-    rgas = 8.314  # J K⁻¹ mol⁻¹
-    volume_m3 = box_volume / 1000.0 # convert litre to m³
-    an_leaf = (delta_ppm_s * pressure * volume_m3) / (rgas * temp_k)
 
-    return an_leaf # µmol leaf s⁻¹
+def calc_anet(delta_ppm_s, box_volume, temp_k):
+    pressure = 101325.  # Pa
+    rgas = 8.314  # J K⁻¹ mol⁻¹
+    volume_m3 = box_volume / 1000.0  # convert litre to m³
+    an_leaf = (delta_ppm_s * pressure * volume_m3) / (rgas * temp_k)
+    return an_leaf  # µmol leaf s⁻¹
+
 
 def calc_vpd(temp_c, rh_percent):
     es = 0.6108 * np.exp((17.27 * temp_c) / (temp_c + 237.3))  # kPa
-    ea = es * (rh_percent / 100.0) # kPa
-
-    return es - ea # kPa
+    ea = es * (rh_percent / 100.0)  # kPa
+    return es - ea  # kPa
 
 
 if __name__ == "__main__":
@@ -109,4 +112,6 @@ if __name__ == "__main__":
     leaf_area_cm2 = 100.0
     window_size = 12
     ofname = "../outputs/photosynthesis_log.csv"
-    main(box_volume, leaf_area_cm2, window_size, ofname)
+
+    force_recalibrate = True
+    main(box_volume, leaf_area_cm2, window_size, ofname, force_recalibrate)
