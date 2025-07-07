@@ -36,7 +36,7 @@ def main():
                     f"[{minutes:02d}:{seconds:02d}] CO₂: {co2:.1f} μmol mol⁻¹ |"
                     f"Temp: {temp:.1f} °C | RH: {rh:.1f} %"
                 )
-                time.sleep(1.5)  # Adjust delay as needed
+                time.sleep(1)  # Adjust delay as needed
             else:
                 time.sleep(1)
 
