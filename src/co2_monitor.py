@@ -16,10 +16,10 @@ def main():
 
     # Disable auto self-calibration and manually recalibrate
     sensor.set_automatic_self_calibration_enabled(False)
-    #print("Waiting 5 minutes in ambient air for stable calibration...")
-    #time.sleep(300)
-    #offset = sensor.perform_forced_recalibration(420)
-    #print(f"Calibration complete. Offset applied: {offset}")
+    print("Waiting 3+ minutes in fresh air to stabilise...")
+    time.sleep(180)
+    #time.sleep(300) # 5 mins
+    sensor.perform_forced_recalibration(420)
 
     print("Reading data from SCD40 sensor...\n")
 
