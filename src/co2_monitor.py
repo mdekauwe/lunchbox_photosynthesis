@@ -13,10 +13,9 @@ def main():
         print("Sensor initialization failed.")
         return
 
-    # Enables automatic self-calibration of CO2, turn off (False) to stop
-    # it doing this
-    sensor.set_automatic_self_calibration_enabled(True)
-
+    # Disable automatic self-calibration of CO2
+    sensor.set_automatic_self_calibration_enabled(False)
+    sensor.perform_forced_recalibration(420)
 
     print("Reading data from SCD40 sensor...\n")
 
