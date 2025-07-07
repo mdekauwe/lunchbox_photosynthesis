@@ -2,8 +2,13 @@ import time
 import qwiic_scd4x
 
 def main():
+
     sensor = qwiic_scd4x.QwiicSCD4x()
 
+    # Enables automatic self-calibration of CO2, turn off (False) to stop
+    # it doing this
+    sensor.set_automatic_self_calibration_enabled(True)
+    
     if not sensor.is_connected():
         print("Sensor not connected. Check wiring and power.")
         return
@@ -25,7 +30,7 @@ def main():
 
                 elapsed_sec = int(time.time() - start_time)
                 minutes, seconds = divmod(elapsed_sec, 60)
-                
+
                 print(
                     f"[{minutes:02d}:{seconds:02d}] CO₂: {co2:.1f} μmol mol⁻¹ |"
                     f"Temp: {temp:.1f} °C | RH: {rh:.1f} %"
