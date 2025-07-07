@@ -25,11 +25,11 @@ def main(box_volume, leaf_area_cm2, window_size, ofname, force_recalibrate):
     sensor.set_automatic_self_calibration_enabled(False)
 
     if force_recalibrate:
-        print("\n[INFO] Waiting 5 mins for sensor to adjust in ambient air...")
+        print("\n** Waiting 5 mins for sensor to adjust in ambient air... **")
         time.sleep(300)  # wait 5 minutes
-        print("[INFO] Performing manual calibration to 400 ppm...")
-        result = sensor.perform_forced_recalibration(400)
-        print(f"[INFO] Calibration result: {result} ppm offset applied\n")
+        print("** Performing manual calibration to 420 ppm... **")
+        result = sensor.perform_forced_recalibration(420)
+        print(f"** Calibration result: {result} ppm offset applied **\n")
 
     print("Starting measurements...")
 
