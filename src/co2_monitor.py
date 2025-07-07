@@ -23,7 +23,7 @@ def main():
 
                 print(
                     f"CO₂: {co2:.1f} μmol mol⁻¹ | Temp: {temp:.1f} °C | "
-                    f"RH: {rh:.1f} % | VPD: {vpd:.2f} kPa"
+                    f"RH: {rh:.1f} %"
                 )
                 time.sleep(2)  # Adjust delay as needed
             else:
