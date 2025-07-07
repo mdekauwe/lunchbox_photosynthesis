@@ -42,6 +42,10 @@ class Photosynthesis:
         self._setup_sensor()
         self._setup_plot()
         self.zero_status_dots = 0
+        # There seems to be an issue when in the light, the temp sensor
+        # measures a very high value, allow the user to override this
+        self.manual_temp_c = None
+
     def run(self):
 
         DEG_2_K = 273.15
@@ -53,6 +57,7 @@ class Photosynthesis:
             while not self.stop_requested:
                 plt.pause(0.05)
                 with self.lock:
+                    manual_temp = self.manual_temp_c
                     logging = self.logging_started
                     zero_run = self.zero_run_started
                     co2_data = (self.co2_window.copy(),
@@ -99,10 +104,12 @@ class Photosynthesis:
                         slope_upper = corr_slope + 1.96 * stderr
                         slope_lower = corr_slope - 1.96 * stderr
 
-                        if len(temps) > 0:
+                        if manual_temp is not None:
+                            temp_K = manual_temp + DEG_2_K
+                        elif len(temps) > 0:
                             temp_K = temps[-1] + DEG_2_K
                         else:
-                            temp_K = 298.15
+                            temp_K = 298.15 # 25 deg
 
                         an_leaf = self.calc_anet(corr_slope, temp_K,
                                                  self.chamber_volume,
@@ -268,6 +275,11 @@ class Photosynthesis:
         self.text_box = TextBox(ax_text, "", initial=str(self.leaf_area_cm2[0]))
         self.text_box.on_submit(self.update_leaf_area)
 
+        self.fig.text(0.375, 0.10, "Manual Temp (°C)", ha="left", va="bottom")
+        ax_temp = plt.axes([0.375, 0.05, 0.25, 0.05])
+        self.temp_box = TextBox(ax_temp, "", initial="")
+        self.temp_box.on_submit(self.update_manual_temp)
+
     def update_leaf_area(self, text):
         try:
             value = float(text)
@@ -278,6 +290,20 @@ class Photosynthesis:
             print(f"Leaf area set to {value:.1f} cm²")
         except ValueError:
             print("Invalid input. Please enter a positive number.")
+
+    def update_manual_temp(self, text):
+        try:
+            if text.strip() == "":
+                with self.lock:
+                    self.manual_temp_c = None
+                print("Using measured temp.")
+            else:
+                value = float(text)
+                with self.lock:
+                    self.manual_temp_c = value
+                print(f"Manual temp set to {value:.1f} °C (override active)")
+        except ValueError:
+            print("Invalid input. Please enter a number or leave blank to clear.")
 
     def start_zero_run(self, event):
         with self.lock:
