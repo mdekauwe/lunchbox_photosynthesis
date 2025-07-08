@@ -1,4 +1,4 @@
-import time
+ximport time
 import threading
 import qwiic_scd4x
 import numpy as np
@@ -241,7 +241,7 @@ class Photosynthesis:
         # accordingly
         self.sensor.set_automatic_self_calibration_enabled(False)
         self.sensor.perform_forced_recalibration(420)
-        
+
         print("==Sensor ready. Use buttons to begin zero run or logging.")
 
     def _setup_plot(self):
@@ -464,6 +464,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 100.0
 
-    logger = Photosynthesis(chamber_volume=1.2, window_size=20, plot_window=300,
+    # less plant size
+    logger = Photosynthesis(chamber_volume=1.0, window_size=20, plot_window=300,
                             zero_run_duration=30, leaf_area_cm2_init=la)
+    #logger = Photosynthesis(chamber_volume=1.2, window_size=20, plot_window=300,
+    #                        zero_run_duration=30, leaf_area_cm2_init=la)
     logger.run()
