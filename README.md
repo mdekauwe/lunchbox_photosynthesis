@@ -2,7 +2,7 @@
 
 Code for sandwich box photosynthesis logger.
 
-<p style="text-align:center"><img src="img/IMG_6177.jpg" width="500"/></p>
+<p style="text-align:center"><img src="img/IMG_6177.jpg" width="400"/></p>
 
 
 ## Notes
