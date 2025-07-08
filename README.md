@@ -2,8 +2,11 @@
 
 Code for sandwich box photosynthesis logger.
 
-<p style="text-align:center"><img src="img/IMG_6177.jpg" width="400"/></p>
 
+<p float="left">
+  <img src="img/IMG_6177.jpg" width="200" />
+  <img src="img/plot.JPG" width="200" />
+</p>
 
 ## Notes
 
