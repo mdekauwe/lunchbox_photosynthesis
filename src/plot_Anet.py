@@ -1,4 +1,4 @@
-ximport time
+import time
 import threading
 import qwiic_scd4x
 import numpy as np
