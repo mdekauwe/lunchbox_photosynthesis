@@ -4,7 +4,7 @@ Code for sandwich box photosynthesis logger.
 
 
 <p float="left">
-  <img src="img/IMG_6177.jpg" width="300" />
+  <img src="img/IMG_6177.jpg" width="350" />
   <img src="img/plot.JPG" width="400" />
 </p>
 
