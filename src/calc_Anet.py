@@ -94,11 +94,26 @@ def main(box_volume, leaf_area_cm2, window_size, ofname, force_recalibrate):
 
 
 def calc_anet(delta_ppm_s, box_volume, temp_k):
+    # Net assimilation rate (An_leaf, umol leaf-1 s-1) calculated using the
+    # ideal gas law (to converts ppm/s  into umol/s)
+    #
+    #          delta_CO2 × P × V
+    # An_leaf = -----------------
+    #                R × T
+    #
+    # where:
+    #   delta_CO2 = rate of CO2 change (ppm s-1)
+    #   P         = pressure (Pa)
+    #   V         = chamber volume (m3)
+    #   R         = universal gas constant (J mol⁻¹ K⁻¹)
+    #   T         = temperature (K)
+
     pressure = 101325.  # Pa
-    rgas = 8.314  # J K⁻¹ mol⁻¹
-    volume_m3 = box_volume / 1000.0  # convert litre to m³
+    rgas = 8.314  # J K-1 mol-1
+    volume_m3 = box_volume / 1000.0  # convert litre to m3
     an_leaf = (delta_ppm_s * pressure * volume_m3) / (rgas * temp_k)
-    return an_leaf  # µmol leaf s⁻¹
+
+    return an_leaf  # umol leaf s-1
 
 
 def calc_vpd(temp_c, rh_percent):

@@ -207,7 +207,21 @@ class Photosynthesis:
 
     @staticmethod
     def calc_anet(delta_ppm_s, temp_K, chamber_volume, pressure_pa):
-        RGAS = 8.314
+        # Net assimilation rate (An_leaf, umol leaf-1 s-1) calculated using the
+        # ideal gas law (to converts ppm/s  into umol/s)
+        #
+        #          delta_CO2 × P × V
+        # An_leaf = -----------------
+        #                R × T
+        #
+        # where:
+        #   delta_CO2 = rate of CO2 change (ppm s-1)
+        #   P         = pressure (Pa)
+        #   V         = chamber volume (m3)
+        #   R         = universal gas constant (J mol⁻¹ K⁻¹)
+        #   T         = temperature (K)
+
+        RGAS = 8.314 # J mol-1 K-1
         volume_m3 = chamber_volume / 1000.0
         an_leaf = (delta_ppm_s * pressure_pa * volume_m3) / (RGAS * temp_K)
 
