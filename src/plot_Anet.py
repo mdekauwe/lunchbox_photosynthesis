@@ -245,7 +245,14 @@ class LunchboxLogger:
 
     @staticmethod
     def saturation_vapour_pressure(temp_c):
-        return 0.611 * np.exp((17.502 * temp_c) / (temp_c + 240.97)) # kPa
+        if temp_c >= 0.0:
+            # Monteith and Unsworth (2008) - Tetens' formula for temp > 0 deg C
+            p = 0.61078 * np.exp((17.27 * temp_c) / (temp_c + 237.3)) # kPa
+        else:
+            # Murray (1967) Tetens' formula for temp < 0 deg C
+            p = 0.61078 * np.exp((21.875 * temp_c) / (temp_c + 265.5)) # kPa
+
+        return p
 
     def _setup_sensor(self):
         self.sensor = qwiic_scd4x.QwiicSCD4x()
