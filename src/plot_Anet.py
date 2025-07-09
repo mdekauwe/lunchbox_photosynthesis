@@ -1,3 +1,4 @@
+import sys
 import time
 import threading
 import qwiic_scd4x
@@ -12,10 +13,10 @@ from scipy.stats import linregress
 
 class Photosynthesis:
 
-    def __init__(self, chamber_volume, window_size, plot_window,
+    def __init__(self, lunchbox_volume, window_size, plot_window,
                  zero_run_duration, leaf_area_cm2_init):
 
-        self.chamber_volume = chamber_volume
+        self.lunchbox_volume = lunchbox_volume
         self.window_size = window_size
         self.plot_window = plot_window
         self.pressure_pa = 101325.
@@ -121,13 +122,13 @@ class Photosynthesis:
                             temp_K = 298.15 # 25 deg
 
                         an_leaf = self.calc_anet(corr_slope, temp_K,
-                                                 self.chamber_volume,
+                                                 self.lunchbox_volume,
                                                  self.pressure_pa)
                         an_leaf_u = self.calc_anet(slope_upper, temp_K,
-                                                   self.chamber_volume,
+                                                   self.lunchbox_volume,
                                                    self.pressure_pa)
                         an_leaf_l = self.calc_anet(slope_lower, temp_K,
-                                                   self.chamber_volume,
+                                                   self.lunchbox_volume,
                                                    self.pressure_pa)
 
                         A_net = -an_leaf / leaf_area_m2
@@ -206,7 +207,7 @@ class Photosynthesis:
             print("Exited cleanly.")
 
     @staticmethod
-    def calc_anet(delta_ppm_s, temp_K, chamber_volume, pressure_pa):
+    def calc_anet(delta_ppm_s, temp_K, lunchbox_volume, pressure_pa):
         # Net assimilation rate (An_leaf, umol leaf-1 s-1) calculated using the
         # ideal gas law (to converts ppm/s  into umol/s)
         #
@@ -222,7 +223,7 @@ class Photosynthesis:
         #   T         = temperature (K)
 
         RGAS = 8.314 # J mol-1 K-1
-        volume_m3 = chamber_volume / 1000.0
+        volume_m3 = lunchbox_volume / 1000.0
         an_leaf = (delta_ppm_s * pressure_pa * volume_m3) / (RGAS * temp_K)
 
         return an_leaf # umol leaf-1 s-1
@@ -468,19 +469,34 @@ class Photosynthesis:
                 time.sleep(0.5)
 
 
+def calc_volume_litres(width_cm, height_cm, length_cm):
+
+    volume_cm3 = width_cm * height_cm * length_cm
+    volume_litres = volume_cm3 / 1000
+    return volume_litres
+
+
 if __name__ == "__main__":
+
 
     import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--leaf_area', type=float,
                         help='Initial leaf area in cm²')
+    parser.add_argument('--no_plant_pot', action='store_true',
+                        help='Turn off volume correction for plant in pot')
     args = parser.parse_args()
     la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 100.0
 
-    # less plant size
-    logger = Photosynthesis(chamber_volume=1.0, window_size=20, plot_window=300,
-                            zero_run_duration=30, leaf_area_cm2_init=la)
-    #logger = Photosynthesis(chamber_volume=1.2, window_size=20, plot_window=300,
-    #                        zero_run_duration=30, leaf_area_cm2_init=la)
+    # correct lunchbox volume for plant in pot?
+    if args.no_correction:
+        lunchbox_volume = 1.2 # litres
+    else:
+        pot_volume = calc_volume_litres(5, 10, 5)
+        lunchbox_volume = 1.2 - pot_volume # litres
+
+    logger = Photosynthesis(lunchbox_volume=lunchbox_volume, window_size=12,
+                            plot_window=300, zero_run_duration=30,
+                            leaf_area_cm2_init=la)
     logger.run()
