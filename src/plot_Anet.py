@@ -230,18 +230,22 @@ class LunchboxLogger:
         return an_leaf # umol leaf-1 s-1
 
     @staticmethod
-    def compute_co2_dry(co2_wet_ppm, rh_percent, temp_C, pressure_pa):
-        e_s = (0.611 * np.exp((17.502 * temp_C) / (temp_C + 240.97)) * 1000)
-        e = rh_percent * e_s / 100.0
+    def compute_co2_dry(co2_wet_ppm, rh_percent, temp_c, pressure_pa):
+        es = LunchboxLogger.saturation_vapor_pressure_tetens(temp_c) * 1000 # Pa
+        ea = es * (rh_percent / 100.0) # Pa
 
-        return co2_wet_ppm / (1 - (e / pressure_pa))
+        return co2_wet_ppm / (1. - (ea / pressure_pa))
 
     @staticmethod
     def calc_vpd(temp_c, rh_percent):
-        es = 0.6108 * np.exp((17.27 * temp_c) / (temp_c + 237.3))  # kPa
+        es = LunchboxLogger.saturation_vapor_pressure_tetens(temp_c) # kPa
         ea = es * (rh_percent / 100.0) # kPa
 
         return es - ea  # kPa
+
+    @staticmethod
+    def saturation_vapor_pressure_tetens(temp_c):
+        return 0.611 * np.exp((17.502 * temp_c) / (temp_c + 240.97)) # kPa
 
     def _setup_sensor(self):
         self.sensor = qwiic_scd4x.QwiicSCD4x()
