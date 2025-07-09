@@ -218,7 +218,7 @@ class Photosynthesis:
         # where:
         #   delta_CO2 = rate of CO2 change (ppm s-1)
         #   P         = pressure (Pa)
-        #   V         = chamber volume (m3)
+        #   V         = lunchbox_volume (m3)
         #   R         = universal gas constant (J mol⁻¹ K⁻¹)
         #   T         = temperature (K)
 
@@ -490,7 +490,7 @@ if __name__ == "__main__":
     la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 100.0
 
     # correct lunchbox volume for plant in pot?
-    if args.no_correction:
+    if args.no_plant_pot:
         lunchbox_volume = 1.2 # litres
     else:
         pot_volume = calc_volume_litres(5, 10, 5)
