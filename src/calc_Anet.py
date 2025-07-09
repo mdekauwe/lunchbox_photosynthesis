@@ -21,16 +21,18 @@ def main(lunchbox_volume, leaf_area_cm2, window_size, ofname,
         print("Error while initializing sensor")
         return
 
-    # Disable automatic self-calibration of CO2
+    # Disable auto self-calibration
+    # The SCD40 performs automatic self-calibration by default, which
+    # assumes the sensor is in ambient air for at least 1 hour per day.
+    # it assumes the lowest CO2 value it sees is 400 ppm and calibrates
+    # accordingly...most likely, the sensor won't see "fresh air" i.e. indoors
     sensor.set_automatic_self_calibration_enabled(False)
-    sensor.perform_forced_recalibration(420)
 
-    #if force_recalibrate:
-    #    print("\n** Waiting 5 mins for sensor to adjust in ambient air... **")
-    #    time.sleep(300)  # wait 5 minutes
-    #    print("** Performing manual calibration to 420 ppm... **")
-    #    result = sensor.perform_forced_recalibration(420)
-    #    print(f"** Calibration result: {result} ppm offset applied **\n")
+    if force_recalibrate:
+        print("\n** Waiting 3 mins for sensor to adjust in ambient air... **")
+        time.sleep(300)
+        print("** Performing manual calibration to 420 ppm... **")
+        result = sensor.perform_forced_recalibration(420)
 
     print("Starting measurements...")
 

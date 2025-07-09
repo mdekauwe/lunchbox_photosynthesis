@@ -3,7 +3,8 @@ import qwiic_scd4x
 import matplotlib.pyplot as plt
 from collections import deque
 
-def main():
+def main(force_recalibrate):
+
     sensor = qwiic_scd4x.QwiicSCD4x()
 
     if not sensor.is_connected():
@@ -14,12 +15,18 @@ def main():
         print("Sensor initialization failed.")
         return
 
-    # Disable auto self-calibration and manually recalibrate
+    # Disable auto self-calibration
+    # The SCD40 performs automatic self-calibration by default, which
+    # assumes the sensor is in ambient air for at least 1 hour per day.
+    # it assumes the lowest CO2 value it sees is 400 ppm and calibrates
+    # accordingly...most likely, the sensor won't see "fresh air" i.e. indoors
     sensor.set_automatic_self_calibration_enabled(False)
-    print("Waiting 3+ minutes in fresh air to stabilise...")
-    time.sleep(180)
-    #time.sleep(300) # 5 mins
-    sensor.perform_forced_recalibration(420)
+
+    if force_recalibrate:
+        print("\n** Waiting 3 mins for sensor to adjust in ambient air... **")
+        time.sleep(180)
+        print("** Performing manual calibration to 420 ppm... **")
+        result = sensor.perform_forced_recalibration(420)
 
     print("Reading data from SCD40 sensor...\n")
 
@@ -71,4 +78,13 @@ def main():
         plt.show()
 
 if __name__ == "__main__":
-    main()
+
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Lunchbox photosynthesis logger")
+    parser.add_argument("--recalibrate", action="store_true",
+                        help="Force manual recalibration to 420 ppm\
+                              before starting measurements")
+    args = parser.parse_args()
+
+    main(args.recalibrate)

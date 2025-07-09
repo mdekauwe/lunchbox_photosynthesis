@@ -253,11 +253,12 @@ class Photosynthesis:
         # The SCD40 performs automatic self-calibration by default, which
         # assumes the sensor is in ambient air for at least 1 hour per day.
         # it assumes the lowest CO2 value it sees is 400 ppm and calibrates
-        # accordingly
+        # accordingly...most likely, the sensor won't see "fresh air" i.e.
+        # indoors
         self.sensor.set_automatic_self_calibration_enabled(False)
-        self.sensor.perform_forced_recalibration(420)
+        self.sensor.perform_forced_recalibration(420)# this doesn't seem to work
 
-        print("==Sensor ready. Use buttons to begin zero run or logging.")
+        print("Sensor ready. Use buttons to begin zero run or logging.")
 
     def _setup_plot(self):
         plt.ion()
