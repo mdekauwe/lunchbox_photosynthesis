@@ -129,10 +129,10 @@ def calc_anet(delta_ppm_s, lunchbox_volume, temp_k):
 
     return an_leaf  # umol leaf s-1
 
-
 def calc_vpd(temp_c, rh_percent):
     es = 0.6108 * np.exp((17.27 * temp_c) / (temp_c + 237.3))  # kPa
     ea = es * (rh_percent / 100.0)  # kPa
+
     return es - ea  # kPa
 
 
