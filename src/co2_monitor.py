@@ -3,6 +3,7 @@ import qwiic_scd4x
 import matplotlib.pyplot as plt
 from collections import deque
 
+
 def main(force_recalibrate):
 
     sensor = qwiic_scd4x.QwiicSCD4x()

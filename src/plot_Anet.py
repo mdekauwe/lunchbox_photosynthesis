@@ -209,15 +209,16 @@ class Photosynthesis:
     @staticmethod
     def calc_anet(delta_ppm_s, temp_K, lunchbox_volume, pressure_pa):
         # Net assimilation rate (An_leaf, umol leaf-1 s-1) calculated using the
-        # ideal gas law (to converts ppm/s  into umol/s)
+        # ideal gas law to solve for "n" amount of substance moles of gas
+        # i.e, converts ppm s-1 into umol s-1
         #
-        #          delta_CO2 × P × V
-        # An_leaf = -----------------
-        #                R × T
+        #            delta_CO2 × p × V
+        # An_leaf = -------------------
+        #                  R × T
         #
         # where:
         #   delta_CO2 = rate of CO2 change (ppm s-1)
-        #   P         = pressure (Pa)
+        #   p         = pressure (Pa)
         #   V         = lunchbox_volume (m3)
         #   R         = universal gas constant (J mol⁻¹ K⁻¹)
         #   T         = temperature (K)
