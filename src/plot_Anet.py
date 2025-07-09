@@ -11,7 +11,7 @@ from matplotlib.widgets import Button, TextBox, CheckButtons
 from scipy.stats import linregress
 
 
-class Photosynthesis:
+class LunchboxLogger:
 
     def __init__(self, lunchbox_volume, window_size, plot_window,
                  zero_run_duration, leaf_area_cm2_init):
@@ -480,7 +480,6 @@ def calc_volume_litres(width_cm, height_cm, length_cm):
 
 if __name__ == "__main__":
 
-
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -498,7 +497,7 @@ if __name__ == "__main__":
         pot_volume = calc_volume_litres(5, 10, 5)
         lunchbox_volume = 1.2 - pot_volume # litres
 
-    logger = Photosynthesis(lunchbox_volume=lunchbox_volume, window_size=12,
+    logger = LunchboxLogger(lunchbox_volume=lunchbox_volume, window_size=12,
                             plot_window=300, zero_run_duration=30,
                             leaf_area_cm2_init=la)
     logger.run()
