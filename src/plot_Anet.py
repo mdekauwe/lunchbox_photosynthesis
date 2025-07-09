@@ -231,20 +231,20 @@ class LunchboxLogger:
 
     @staticmethod
     def compute_co2_dry(co2_wet_ppm, rh_percent, temp_c, pressure_pa):
-        es = LunchboxLogger.saturation_vapor_pressure_tetens(temp_c) * 1000 # Pa
+        es = LunchboxLogger.saturation_vapour_pressure(temp_c) * 1000 # Pa
         ea = es * (rh_percent / 100.0) # Pa
 
         return co2_wet_ppm / (1. - (ea / pressure_pa))
 
     @staticmethod
     def calc_vpd(temp_c, rh_percent):
-        es = LunchboxLogger.saturation_vapor_pressure_tetens(temp_c) # kPa
+        es = LunchboxLogger.saturation_vapour_pressure(temp_c) # kPa
         ea = es * (rh_percent / 100.0) # kPa
 
         return es - ea  # kPa
 
     @staticmethod
-    def saturation_vapor_pressure_tetens(temp_c):
+    def saturation_vapour_pressure(temp_c):
         return 0.611 * np.exp((17.502 * temp_c) / (temp_c + 240.97)) # kPa
 
     def _setup_sensor(self):
