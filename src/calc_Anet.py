@@ -47,7 +47,6 @@ def main(lunchbox_volume, leaf_area_cm2, window_size, ofname,
         f = None
         writer = None
 
-
     try:
         while True:
             if sensor.read_measurement():
