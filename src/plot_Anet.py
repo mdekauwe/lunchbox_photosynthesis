@@ -137,7 +137,7 @@ class LunchboxLogger:
                         A_net_l = -an_leaf_l / leaf_area_m2
 
                         now = time.time()
-                        if now - self.last_anet_print_time > 3:
+                        if now - self.last_anet_print_time > 5:
                             print(
                                 f"ΔCO₂: {corr_slope:+.4f} ± {1.96*stderr:.4f} | "
                                 f"A_net: {A_net:+.2f}"
@@ -199,7 +199,7 @@ class LunchboxLogger:
                         if y_vals:
                             y_min = -1.5
                             y_max_data = max(y_vals)
-                            y_max = min(y_max_data + 1, 20) 
+                            y_max = min(y_max_data + 1, 20)
                             self.ax.set_ylim(y_min, y_max)
 
                         self.ax2.relim()
