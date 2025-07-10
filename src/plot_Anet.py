@@ -453,6 +453,9 @@ class LunchboxLogger:
                                         "ignoring correction."
                                     )
                                     self.zero_slope = 0.0
+                                    # add 6 more seconds to zero run
+                                    self.zero_run_duration += 6
+                                    continue
                                 else:
                                     print(f"Zero slope accepted = {slope:.8f}")
                                     self.zero_slope = slope
