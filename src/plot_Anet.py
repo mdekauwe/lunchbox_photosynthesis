@@ -14,7 +14,8 @@ from scipy.stats import linregress
 class LunchboxLogger:
 
     def __init__(self, lunchbox_volume, window_size, plot_window,
-                 zero_run_duration, leaf_area_cm2_init):
+                 zero_run_duration, leaf_area_cm2_init,
+                 no_dry_correction):
 
         self.lunchbox_volume = lunchbox_volume
         self.window_size = window_size
@@ -46,9 +47,9 @@ class LunchboxLogger:
         # There seems to be an issue when in the light, the temp sensor
         # measures a very high value, allow the user to override this
         self.manual_temp_c = None
-        self.use_dry_co2 = False
         self.dry_co2_window = np.full(window_size, np.nan)
         self.last_anet_print_time = 0
+        self.no_dry_correction = no_dry_correction
 
     def run(self):
 
@@ -86,19 +87,18 @@ class LunchboxLogger:
 
                     if filled:
                         times = time_window
-                        if self.use_dry_co2:
-                            co2s = self.dry_co2_window
-                        else:
+                        if self.no_dry_correction:
                             co2s = co2_window
+                        else:
+                            co2s = self.dry_co2_window
                         temps = temp_vals
                         rhs = rh_vals
                     else:
                         times = time_window[:idx]
-                        if self.use_dry_co2:
-                            co2s = self.dry_co2_window[:idx]
-                        else:
+                        if self.no_dry_correction:
                             co2s = co2_window[:idx]
-
+                        else:
+                            co2s = self.dry_co2_window[:idx]
                         temps = temp_vals[:idx]
                         rhs = rh_vals[:idx]
 
@@ -145,7 +145,7 @@ class LunchboxLogger:
                             print("-" * 40)
                             self.last_anet_print_time = now
 
-                        
+
 
                         now = time.time()
                         with self.lock:
@@ -334,15 +334,6 @@ class LunchboxLogger:
         self.temp_box = TextBox(ax_temp, "", initial="")
         self.temp_box.on_submit(self.update_manual_temp)
 
-        self.fig.text(0.7, 0.10, "Use Dry CO₂", ha="left", va="bottom")
-        ax_check = plt.axes([0.7, 0.05, 0.25, 0.05])
-        self.dry_co2_check = CheckButtons(ax_check, ['Enable'], [False])
-        self.dry_co2_check.on_clicked(self.toggle_dry_co2)
-
-    def toggle_dry_co2(self, label):
-        with self.lock:
-            self.use_dry_co2 = not self.use_dry_co2
-        print(f"Dry CO₂ correction {'enabled' if self.use_dry_co2 else 'disabled'}")
 
     def update_leaf_area(self, text):
         try:
@@ -514,6 +505,8 @@ if __name__ == "__main__":
                         help='Initial leaf area in cm²')
     parser.add_argument('--no_plant_pot', action='store_true',
                         help='Turn off volume correction for plant in pot')
+    parser.add_argument('--no_dry_correction', action='store_true',
+                        help='Disable dry CO2 correction (use raw CO2)')
     args = parser.parse_args()
     la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 23.0
 
@@ -526,5 +519,6 @@ if __name__ == "__main__":
 
     logger = LunchboxLogger(lunchbox_volume=lunchbox_volume, window_size=12,
                             plot_window=600, zero_run_duration=30,
-                            leaf_area_cm2_init=la)
+                            leaf_area_cm2_init=la,
+                            no_dry_correction=args.no_dry_correction)
     logger.run()
