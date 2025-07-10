@@ -522,6 +522,6 @@ if __name__ == "__main__":
         lunchbox_volume = 1.2 - pot_volume # litres
 
     logger = LunchboxLogger(lunchbox_volume=lunchbox_volume, window_size=12,
-                            plot_window=300, zero_run_duration=30,
+                            plot_window=600, zero_run_duration=30,
                             leaf_area_cm2_init=la)
     logger.run()
