@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import time
 import qwiic_scd4x
 import matplotlib.pyplot as plt
