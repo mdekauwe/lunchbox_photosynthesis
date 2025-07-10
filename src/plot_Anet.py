@@ -516,7 +516,8 @@ if __name__ == "__main__":
     else:
         pot_volume = calc_volume_litres(5, 10, 5)
         lunchbox_volume = 1.2 - pot_volume # litres
-
+        
+    # plot window = 1200 is 20 mins of stored x axis, then we lose old data
     logger = LunchboxLogger(lunchbox_volume=lunchbox_volume, window_size=12,
                             plot_window=1200, zero_run_duration=30,
                             leaf_area_cm2_init=la,
