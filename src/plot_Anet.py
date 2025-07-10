@@ -144,7 +144,7 @@ class LunchboxLogger:
                             )
                             print("-" * 40)
                             self.last_anet_print_time = now
-                        
+
                         print("-" * 40)
 
                         now = time.time()
@@ -193,8 +193,15 @@ class LunchboxLogger:
                             self.rh_line.set_xdata([])
                             self.rh_line.set_ydata([])
 
-                        self.ax.relim()
-                        self.ax.autoscale_view()
+                        #self.ax.relim()
+                        #self.ax.autoscale_view()
+                        y_vals = list(self.anet_values)
+                        if y_vals:
+                            y_min = -1.5
+                            y_max_data = max(y_vals)
+                            y_max = min(y_max_data + 1, 20) 
+                            self.ax.set_ylim(y_min, y_max)
+
                         self.ax2.relim()
                         self.ax2.autoscale_view()
 
