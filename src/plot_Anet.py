@@ -197,9 +197,12 @@ class LunchboxLogger:
                         #self.ax.autoscale_view()
                         y_vals = list(self.anet_values)
                         if y_vals:
-                            y_min = -1.5
+                            y_min_cap = -5.0
+                            y_max_cap = 20
+                            y_min_data = min(y_vals)
+                            y_min = max(y_min_data - 1, y_min_cap)
                             y_max_data = max(y_vals)
-                            y_max = min(y_max_data + 1, 20)
+                            y_max = min(y_max_data + 1, y_max_cap)
                             self.ax.set_ylim(y_min, y_max)
 
                         self.ax2.relim()
