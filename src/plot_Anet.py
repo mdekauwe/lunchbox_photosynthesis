@@ -445,15 +445,20 @@ class LunchboxLogger:
                                 slope, _ = np.polyfit(times_np - times_np[0],
                                                         co2_np, 1)
                                 if abs(slope) > 0.05:
-                                    print(f"Warning: large zero slope = \
-                                            {slope:.4f}, ignoring correction.")
+                                    print(
+                                        "Warning: large zero slope = "
+                                        f"{slope:.4f}, "
+                                        "ignoring correction."
+                                    )
                                     self.zero_slope = 0.0
                                 else:
                                     print(f"Zero slope accepted = {slope:.4f}")
                                     self.zero_slope = slope
 
-                                print(f"Final zero slope correction: \
-                                        {self.zero_slope:.4f} ppm s-1")
+                                print(
+                                        f"Final zero slope correction: "
+                                        f"{self.zero_slope:.8f} ppm s-1"
+                                )
                                 self.zero_data_times.clear()
                                 self.zero_data_co2.clear()
                                 self.zero_run_started = False
