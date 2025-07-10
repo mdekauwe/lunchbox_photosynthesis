@@ -447,12 +447,12 @@ class LunchboxLogger:
                                 if abs(slope) > 0.05:
                                     print(
                                         "Warning: large zero slope = "
-                                        f"{slope:.4f}, "
+                                        f"{slope:.8f}, "
                                         "ignoring correction."
                                     )
                                     self.zero_slope = 0.0
                                 else:
-                                    print(f"Zero slope accepted = {slope:.4f}")
+                                    print(f"Zero slope accepted = {slope:.8f}")
                                     self.zero_slope = slope
 
                                 print(
