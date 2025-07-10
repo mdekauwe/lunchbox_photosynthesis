@@ -437,8 +437,10 @@ class LunchboxLogger:
                         enough_data = False
                         with self.lock:
                             if len(self.zero_data_co2) < self.window_size:
-                                print(f"Only {len(self.zero_data_co2)} zero \
-                                        points. Waiting for more...")
+                                print(
+                                    f"Only {len(self.zero_data_co2)} zero "
+                                    "points. Waiting for more..."
+                                )
                                 self.zero_run_duration += 6
                                 enough_data = False
                             else:
