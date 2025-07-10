@@ -48,6 +48,7 @@ class LunchboxLogger:
         self.manual_temp_c = None
         self.use_dry_co2 = False
         self.dry_co2_window = np.full(window_size, np.nan)
+        self.last_anet_print_time = 0
 
     def run(self):
 
@@ -135,10 +136,15 @@ class LunchboxLogger:
                         A_net_u = -an_leaf_u / leaf_area_m2
                         A_net_l = -an_leaf_l / leaf_area_m2
 
-                        print(
-                            f"ΔCO₂: {corr_slope:+.4f} ± {1.96*stderr:.4f} | "
-                            f"A_net: {A_net:+.2f}"
-                        )
+                        now = time.time()
+                        if now - self.last_anet_print_time > 3:
+                            print(
+                                f"ΔCO₂: {corr_slope:+.4f} ± {1.96*stderr:.4f} | "
+                                f"A_net: {A_net:+.2f}"
+                            )
+                            print("-" * 40)
+                            self.last_anet_print_time = now
+                        
                         print("-" * 40)
 
                         now = time.time()
