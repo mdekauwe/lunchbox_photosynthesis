@@ -499,7 +499,7 @@ if __name__ == "__main__":
     parser.add_argument('--no_plant_pot', action='store_true',
                         help='Turn off volume correction for plant in pot')
     args = parser.parse_args()
-    la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 100.0
+    la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 23.0
 
     # correct lunchbox volume for plant in pot?
     if args.no_plant_pot:
