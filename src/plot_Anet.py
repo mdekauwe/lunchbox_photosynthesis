@@ -50,6 +50,7 @@ class LunchboxLogger:
         self.dry_co2_window = np.full(window_size, np.nan)
         self.last_anet_print_time = 0
         self.no_dry_correction = no_dry_correction
+        self._last_zero_print = 0
 
     def run(self):
 
@@ -422,6 +423,14 @@ class LunchboxLogger:
                     self.status_text.set_text(f"Status: Zero run running{dots}")
                     plt.draw()
 
+                    now_print = time.time()
+                    with self.lock:
+                        last_print = getattr(self, '_last_zero_print', 0)
+                    if now_print - last_print > 1.0:
+                        print(f"Zero run running{dots}")
+                        with self.lock:
+                            self._last_zero_print = now_print
+
                     if elapsed >= self.zero_run_duration:
                         enough_data = False
                         with self.lock:
@@ -443,6 +452,8 @@ class LunchboxLogger:
                                     print(f"Zero slope accepted = {slope:.4f}")
                                     self.zero_slope = slope
 
+                                print(f"Final zero slope correction: \
+                                        {self.zero_slope:.4f} ppm s-1")
                                 self.zero_data_times.clear()
                                 self.zero_data_co2.clear()
                                 self.zero_run_started = False
@@ -516,7 +527,7 @@ if __name__ == "__main__":
     else:
         pot_volume = calc_volume_litres(5, 10, 5)
         lunchbox_volume = 1.2 - pot_volume # litres
-        
+
     # plot window = 1200 is 20 mins of stored x axis, then we lose old data
     logger = LunchboxLogger(lunchbox_volume=lunchbox_volume, window_size=12,
                             plot_window=1200, zero_run_duration=30,
