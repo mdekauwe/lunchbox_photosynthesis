@@ -145,7 +145,7 @@ class LunchboxLogger:
                             print("-" * 40)
                             self.last_anet_print_time = now
 
-                        print("-" * 40)
+                        
 
                         now = time.time()
                         with self.lock:
