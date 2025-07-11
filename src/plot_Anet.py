@@ -119,7 +119,7 @@ class LunchboxLogger:
                             temp_K = temps[-1] + DEG_2_K
                         else:
                             temp_K = 298.15  # 25 deg
-                            
+
                         an_leaf = self.calc_anet(corr_slope, temp_K,
                                                  self.lunchbox_volume,
                                                  self.pressure_pa)
