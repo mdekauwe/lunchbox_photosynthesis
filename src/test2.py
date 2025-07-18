@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import csv
 from datetime import datetime, UTC
 import matplotlib.pyplot as plt
@@ -9,6 +7,7 @@ def main(fname, lunchbox_volume):
 
     timestamps, co2_ppm = read_co2_csv(fname)
 
+    # Calculate delta ppm per second
     delta_ppm_s = []
     times = []
     for i in range(1, len(timestamps)):
