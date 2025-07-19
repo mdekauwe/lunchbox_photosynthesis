@@ -136,5 +136,6 @@ if __name__ == "__main__":
     if fname is None:
         print("No CSV file starting with 'PAS_CO2_datalog_' found on Desktop")
     else:
+        print(fname)
         main(fname, lunchbox_width_cm, lunchbox_height_cm, lunchbox_length_cm,
              temp_k)
