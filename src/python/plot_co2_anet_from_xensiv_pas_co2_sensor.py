@@ -120,7 +120,7 @@ def update_plot(frame, xs, ys_co2, ys_anet, line_co2, line_anet, ax_co2,
             anet_area = -anet_leaf / leaf_area_m2
 
             print(f"Time: {elapsed_min:.2f} min | "
-                  f"CO₂: {co2:+.3f} ppm | "
+                  f"CO₂: {co2:.3f} ppm | "
                   f"A_net: {anet_area:+.2f} μmol m⁻² s⁻¹")
 
             if elapsed_s > plot_duration_s:
