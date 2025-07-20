@@ -56,7 +56,7 @@ class LunchboxMonitor:
 
     def _setup_axes(self):
         self.ax_anet.set_xlabel("Elapsed Time (min)")
-        self.ax_anet.set_ylabel("Net assimilation rate (μmol s⁻¹)",
+        self.ax_anet.set_ylabel("Net assimilation rate (μmol m⁻2 s⁻¹)",
                                 color="black")
         self.ax_anet.set_ylim(-1, 5)
         self.ax_anet.tick_params(axis="y", labelcolor="black")
