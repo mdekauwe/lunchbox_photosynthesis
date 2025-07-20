@@ -42,7 +42,7 @@ class LunchboxMonitor:
             raise
 
         # Plot setup
-        self.fig, self.ax_anet = plt.subplots(figsize=(10, 6))
+        self.fig, self.ax_anet = plt.subplots(figsize=(12, 6))
         self.ax_co2 = self.ax_anet.twinx()
         self._setup_axes()
 
