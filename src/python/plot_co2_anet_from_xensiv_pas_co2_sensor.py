@@ -10,7 +10,7 @@ import numpy as np
 from xensiv_pas_co2_sensor import CO2Sensor
 
 
-class LunchboxMonitor:
+class LunchboxLogger:
     def __init__(self, port, baud, lunchbox_volume, temp_c, leaf_area_cm2,
                  window_size, measure_interval=10, timeout=1.0,
                  plot_duration_min=10):
@@ -177,7 +177,7 @@ if __name__ == "__main__":
                         help='Initial leaf area in cm²')
     parser.add_argument('--window_size', type=int,
                         help='Number of samples in slope estimation window',
-                        default=10)
+                        default=4)
     args = parser.parse_args()
 
     port = "/dev/tty.usbmodem11201"
@@ -193,6 +193,6 @@ if __name__ == "__main__":
     temp = args.temp
     window_size = args.window_size
 
-    app = LunchboxMonitor(port, baud, lunchbox_volume, temp, la, window_size,
-                          measure_interval=10, timeout=1.0)
-    app.run()
+    logger = LunchboxLogger(port, baud, lunchbox_volume, temp, la, window_size,
+                            measure_interval=10, timeout=1.0)
+    logger.run()
