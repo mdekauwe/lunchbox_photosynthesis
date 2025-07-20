@@ -16,6 +16,7 @@ class LunchboxLogger:
                  plot_duration_min=10):
 
         self.temp_k = temp_c + 273.15
+        self.pressure = 101325.  # Pa
         self.leaf_area_m2 = leaf_area_cm2 / 10000.0
         self.lunchbox_volume = lunchbox_volume
         self.window_size = window_size
@@ -54,6 +55,14 @@ class LunchboxLogger:
         self.start_time = time.time()
         self.last_measure_time = 0
 
+    def run(self):
+        ani = animation.FuncAnimation(self.fig, self.update, blit=False,
+                                      interval=self.interval_ms,
+                                      cache_frame_data=False,)
+        plt.tight_layout()
+        plt.show()
+        self.sensor.close()
+
     def _setup_axes(self):
         self.ax_anet.set_xlabel("Elapsed Time (min)")
         self.ax_anet.set_ylabel("Net assimilation rate (μmol m⁻2 s⁻¹)",
@@ -81,12 +90,11 @@ class LunchboxLogger:
         #   V         = lunchbox_volume (m3)
         #   R         = universal gas constant (J mol⁻¹ K⁻¹)
         #   T         = temperature (K)
-        pressure = 101325.  # Pa
         rgas = 8.314  # J K-1 mol-1
         volume_m3 = self.lunchbox_volume / 1000.0  # litre to m3
-        an_leaf = (delta_ppm_s * pressure * volume_m3) / (rgas * self.temp_k)
+        an = (delta_ppm_s * self.pressure_pa * volume_m3) / (rgas * self.temp_k)
 
-        return an_leaf # umol leaf s-1
+        return an # umol leaf s-1
 
     def update(self, frame):
         current_time = time.time()
@@ -151,18 +159,10 @@ class LunchboxLogger:
 
         return self.line_co2, self.line_anet
 
-    def run(self):
-        ani = animation.FuncAnimation(self.fig, self.update, blit=False,
-                                      interval=self.interval_ms,
-                                      cache_frame_data=False,)
-        plt.tight_layout()
-        plt.show()
-        self.sensor.close()
-
-
 def calc_volume_litres(width_cm, height_cm, length_cm):
     volume_cm3 = width_cm * height_cm * length_cm
     volume_litres = volume_cm3 / 1000
+
     return volume_litres
 
 
