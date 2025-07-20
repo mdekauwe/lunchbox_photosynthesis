@@ -3,7 +3,6 @@
 """
 NB. This sensor does not record temp, so the user will need to pass this or use
 the default value.
-
 """
 
 import serial
