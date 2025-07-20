@@ -92,7 +92,7 @@ class LunchboxLogger:
         #   T         = temperature (K)
         rgas = 8.314  # J K-1 mol-1
         volume_m3 = self.lunchbox_volume / 1000.0  # litre to m3
-        an = (delta_ppm_s * self.pressure_pa * volume_m3) / (rgas * self.temp_k)
+        an = (delta_ppm_s * self.pressure * volume_m3) / (rgas * self.temp_k)
 
         return an # umol leaf s-1
 
