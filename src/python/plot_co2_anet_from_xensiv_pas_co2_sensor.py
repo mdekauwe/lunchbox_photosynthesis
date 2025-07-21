@@ -186,9 +186,9 @@ if __name__ == "__main__":
     if args.no_plant_pot:
         lunchbox_volume = 1.0  # litres
     else:
-        pot_volume = calc_volume_litres(8, 12, 17.5)
+        pot_volume = calc_volume_litres(5, 10, 5)
         lunchbox_volume = 1.0 - pot_volume  # litres
-    print(lunchbox_volume)
+    
 
     la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 25.0
     temp = args.temp
