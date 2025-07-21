@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--temp', type=float, help='Temperature in deg C',
-                         default=18.)
+                         default=20.)
     parser.add_argument('--no_plant_pot', action='store_true',
                         help='Turn off volume correction for plant in pot')
     parser.add_argument('--leaf_area', type=float,
@@ -186,8 +186,9 @@ if __name__ == "__main__":
     if args.no_plant_pot:
         lunchbox_volume = 1.0  # litres
     else:
-        pot_volume = calc_volume_litres(17.5, 12, 5)
+        pot_volume = calc_volume_litres(8, 12, 17.5)
         lunchbox_volume = 1.0 - pot_volume  # litres
+    print(lunchbox_volume)
 
     la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 25.0
     temp = args.temp
