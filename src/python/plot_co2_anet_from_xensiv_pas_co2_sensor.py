@@ -6,6 +6,7 @@ import matplotlib.animation as animation
 from collections import deque
 import argparse
 import numpy as np
+import serial
 
 from xensiv_pas_co2_sensor import CO2Sensor
 
@@ -180,7 +181,8 @@ if __name__ == "__main__":
                         default=4)
     args = parser.parse_args()
 
-    port = "/dev/tty.usbmodem11201"
+    #port = "/dev/tty.usbmodem11201" # home computer
+    port = "/dev/tty.usbmodem101"   # work computer
     baud = 9600
 
     if args.no_plant_pot:
@@ -188,7 +190,7 @@ if __name__ == "__main__":
     else:
         pot_volume = calc_volume_litres(5, 10, 5)
         lunchbox_volume = 1.0 - pot_volume  # litres
-    
+
 
     la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 25.0
     temp = args.temp
