@@ -7,14 +7,14 @@ from collections import deque
 import argparse
 import numpy as np
 import serial
-from scipy.signal import savgol_filter
+from scipy.signal import savgol_filter, butter, filtfilt
 
 from xensiv_pas_co2_sensor import CO2Sensor
 
 class LunchboxLogger:
     def __init__(self, port, baud, lunchbox_volume, temp_c, leaf_area_cm2,
                  window_size, measure_interval=10, timeout=1.0,
-                 plot_duration_min=10):
+                 plot_duration_min=10, smoothing=True):
 
         self.temp_k = temp_c + 273.15
         self.pressure = 101325.  # Pa
@@ -24,7 +24,7 @@ class LunchboxLogger:
         self.measure_interval = measure_interval
         self.plot_duration_min = plot_duration_min
         self.plot_duration_s = plot_duration_min * 60
-        self.interval_ms = 60
+        self.interval_ms = 200#60
         self.max_len = int(self.plot_duration_s / (self.interval_ms / 1000))
 
         # Data buffers
@@ -44,6 +44,7 @@ class LunchboxLogger:
             print(f"Failed to arm sensor: {e}")
             self.sensor.close()
             raise
+        self.smoothing = smoothing
 
         # Plot setup
         self.fig, self.ax_anet = plt.subplots(figsize=(12, 6))
@@ -118,19 +119,43 @@ class LunchboxLogger:
                 time_array = np.array(self.time_window)
                 elapsed = time_array - time_array[0]
 
-                # Apply Savitzky-Golay filter to smooth CO₂ values
-                if len(co2_array) >= 5:
-                    co2_array_smooth = savgol_filter(co2_array, window_length=5,
-                                                     polyorder=2)
+
+                if self.smoothing and len(co2_array) >= self.window_size:
+                    # Apply Savitzky-Golay filter to smooth CO2 values, but
+                    # preserve peaks and slopes, i.e., stabilize deltaCO2 vs
+                    # time slope
+                    co2_array_smooth = savgol_filter(co2_array,
+                                                window_length=self.window_size,
+                                                polyorder=3)
+
+                    # Use a Butterworth low-pass to remove the remaining
+                    # cyclical noise that seems to be associated with the
+                    # co2 sensor, i.e., when we don't have a plant in the box
+
+                    # sampling frequency in Hz (e.g., 0.5 Hz if
+                    # measure_interval=2)
+                    fs = 1 / self.measure_interval
+
+                    # Hz — adjust based on oscillation frequency you want to
+                    # filter out
+                    cutoff = 0.01 # 1 cycle every 100 seconds
+
+                    # relaxing to this, ignore faster than 50 seconds
+                    # cutoff = 0.02
+
+                    # could drop the order=4
+                    # order = 6 needs a window size of 25
+                    # order = 4 works fine with 21
+                    co2_array_filter = butter_lowpass_filter(co2_array_smooth,
+                                                             cutoff, fs,
+                                                             order=4)
                 else:
-                    co2_array_smooth = co2_array
+                    co2_array_filter = co2_array
 
                 (p, residuals, rank,
                  singular_values,
-                 rcond) = np.polyfit(elapsed, co2_array_smooth, 1, full=True)
-                #(p, residuals, rank,
-                # singular_values,
-                # rcond) = np.polyfit(elapsed, co2_array, 1, full=True)
+                 rcond) = np.polyfit(elapsed, co2_array_filter, 1, full=True)
+
                 slope = p[0]
                 intercept = p[1]
 
@@ -170,11 +195,17 @@ class LunchboxLogger:
                 # Set y-axis limits based on raw data (no smoothing)
                 anet_min = min(self.ys_anet_lower) if self.ys_anet_lower else 0
                 anet_max = max(self.ys_anet_upper) if self.ys_anet_upper else 1
-                anet_margin = (anet_max - anet_min) * 0.1 \
-                                    if (anet_max - anet_min) > 0 else 1
-                #self.ax_anet.set_ylim(max(-5, anet_min - anet_margin),
-                #                      min(20, anet_max + anet_margin))
-                self.ax_anet.set_ylim(-5, 20)
+                anet_range = anet_max - anet_min
+
+                if anet_range < 1.0:
+                    # Avoid too narrow range
+                    mean_val = (anet_max + anet_min) / 2
+                    self.ax_anet.set_ylim(mean_val - 1, mean_val + 1)
+                else:
+                    anet_margin = anet_range * 0.1
+                    self.ax_anet.set_ylim(anet_min - anet_margin,
+                                            anet_max + anet_margin)
+                #self.ax_anet.set_ylim(-5, 20)
 
                 # Update plot with raw data (no smoothing)
                 self.line_anet.set_data(self.xs, self.ys_anet)
@@ -204,8 +235,16 @@ class LunchboxLogger:
 def calc_volume_litres(width_cm, height_cm, length_cm):
     volume_cm3 = width_cm * height_cm * length_cm
     volume_litres = volume_cm3 / 1000
+
     return volume_litres
 
+def butter_lowpass_filter(data, cutoff, fs, order=4):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    y = filtfilt(b, a, data)
+
+    return y
 
 if __name__ == "__main__":
 
@@ -218,8 +257,14 @@ if __name__ == "__main__":
                         help='Initial leaf area in cm²')
     parser.add_argument('--window_size', type=int,
                         help='Number of samples in slope estimation window',
-                        default=10)
+                        default=21) # must be off for smoothing filter
+    parser.add_argument('--no_smoothing', action='store_true',
+                        help='Turn off Savitzky-Golay and Butterworth \
+                              smoothing filters')
     args = parser.parse_args()
+
+    if args.window_size % 2 == 0 or args.window_size < 5:
+        raise ValueError("window_size must be an odd integer ≥ 5")
 
     # ls /dev/tty.*
     port = "/dev/tty.usbmodem1101" # home computer
@@ -237,5 +282,6 @@ if __name__ == "__main__":
     window_size = args.window_size
 
     logger = LunchboxLogger(port, baud, lunchbox_volume, temp, la, window_size,
-                            measure_interval=10, timeout=1.0)
+                            measure_interval=1, timeout=1.0,
+                            smoothing=not args.no_smoothing)
     logger.run()
