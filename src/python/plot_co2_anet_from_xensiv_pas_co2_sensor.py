@@ -10,7 +10,6 @@ import serial
 
 from xensiv_pas_co2_sensor import CO2Sensor
 
-
 class LunchboxLogger:
     def __init__(self, port, baud, lunchbox_volume, temp_c, leaf_area_cm2,
                  window_size, measure_interval=10, timeout=1.0,
@@ -29,10 +28,12 @@ class LunchboxLogger:
 
         # Data buffers
         self.xs = deque(maxlen=self.max_len)
-        self.ys_co2 = deque(maxlen=self.max_len)
         self.ys_anet = deque(maxlen=self.max_len)
+        self.ys_anet_lower = deque(maxlen=self.max_len)
+        self.ys_anet_upper = deque(maxlen=self.max_len)
         self.co2_window = deque(maxlen=window_size)
         self.time_window = deque(maxlen=window_size)
+        self.anet_fill = None
 
         # Setup sensor
         self.sensor = CO2Sensor(port, baud, timeout)
@@ -45,14 +46,14 @@ class LunchboxLogger:
 
         # Plot setup
         self.fig, self.ax_anet = plt.subplots(figsize=(12, 6))
-        self.ax_co2 = self.ax_anet.twinx()
         self._setup_axes()
 
-        self.line_anet, = self.ax_anet.plot([], [], lw=2, color="royalblue", \
+        self.line_anet, = self.ax_anet.plot([], [], lw=2, color="#28b463", \
                             label="Anet")
-        self.line_co2, = self.ax_co2.plot([], [], lw=2, color="seagreen", \
-                            label="CO₂")
-
+        self.co2_text = self.ax_anet.text(
+                            0.02, 0.95, "", transform=self.ax_anet.transAxes,
+                            fontsize=12, verticalalignment='top',
+                            color='#8e44ad')
         self.start_time = time.time()
         self.last_measure_time = 0
 
@@ -68,13 +69,9 @@ class LunchboxLogger:
         self.ax_anet.set_xlabel("Elapsed Time (min)")
         self.ax_anet.set_ylabel("Net assimilation rate (μmol m⁻² s⁻¹)",
                                 color="black")
-        self.ax_anet.set_ylim(-1, 5)
+        self.ax_anet.set_ylim(-1, 15)
         self.ax_anet.tick_params(axis="y", labelcolor="black")
         self.ax_anet.set_xlim(0, self.plot_duration_min)
-
-        self.ax_co2.set_ylabel("CO₂ (ppm)", color="black")
-        self.ax_co2.set_ylim(0, 1000)
-        self.ax_co2.tick_params(axis="y", labelcolor="black")
 
     def calc_anet(self, delta_ppm_s):
         # Net assimilation rate (An_leaf, umol leaf-1 s-1) calculated using the
@@ -106,9 +103,10 @@ class LunchboxLogger:
             try:
                 co2 = self.sensor.read_co2()
                 self.last_measure_time = current_time
+                self.co2_text.set_text(f"CO₂ = {co2:.0f} ppm")
             except Exception as e:
                 print(f"Read error: {e}")
-                return self.line_co2, self.line_anet
+                return self.line_anet, self.co2_text
 
             self.co2_window.append(co2)
             self.time_window.append(current_time)
@@ -117,53 +115,83 @@ class LunchboxLogger:
                 co2_array = np.array(self.co2_window)
                 time_array = np.array(self.time_window)
                 elapsed = time_array - time_array[0]
-                slope, _ = np.polyfit(elapsed, co2_array, 1)
+
+                (p, residuals, rank,
+                 singular_values,
+                 rcond) = np.polyfit(elapsed, co2_array, 1, full=True)
+                slope = p[0]
+                intercept = p[1]
+
+                n = len(elapsed)
+                if n > 2 and residuals.size > 0:
+                    residual_var = residuals[0] / (n - 2)
+                    x_var = np.var(elapsed, ddof=1)
+                    stderr = np.sqrt(residual_var / (n * x_var))
+                else:
+                    stderr = 0
+
+                slope_upper = slope + 1.96 * stderr
+                slope_lower = slope - 1.96 * stderr
+
                 anet_leaf = self.calc_anet(slope)
+                anet_leaf_u = self.calc_anet(slope_upper)
+                anet_leaf_l = self.calc_anet(slope_lower)
+
                 anet_area = -anet_leaf / self.leaf_area_m2
+                anet_area_u = -anet_leaf_u / self.leaf_area_m2
+                anet_area_l = -anet_leaf_l / self.leaf_area_m2
 
                 print(f"Time: {elapsed_min:.2f} min | "
                       f"CO₂: {co2:.3f} ppm | "
                       f"A_net: {anet_area:+.2f} μmol m⁻² s⁻¹")
 
-                if elapsed_s > self.plot_duration_s:
-                    shifted_xs = [x - (elapsed_min - \
-                                  self.plot_duration_min) for x in self.xs]
-                    self.xs.clear()
-                    self.xs.extend(shifted_xs)
-                    self.xs.append(self.plot_duration_min)
-                else:
-                    self.xs.append(elapsed_min)
-
-                self.ys_co2.append(co2)
+                self.xs.append(elapsed_min)
                 self.ys_anet.append(anet_area)
+                self.ys_anet_lower.append(anet_area_l)
+                self.ys_anet_upper.append(anet_area_u)
 
-                co2_min = min(self.ys_co2) if self.ys_co2 else 0
-                co2_max = max(self.ys_co2) if self.ys_co2 else 1000
-                co2_margin = (co2_max - co2_min) * 0.1 \
-                                if (co2_max - co2_min) > 0 else 100
-                new_co2_max = min(3000, co2_max + co2_margin)
-                self.ax_co2.set_ylim(0, new_co2_max)
+                # Set x-axis limits for moving window
+                self.ax_anet.set_xlim(
+                    max(0, elapsed_min - self.plot_duration_min),
+                    elapsed_min)
 
-                anet_min = min(self.ys_anet) if self.ys_anet else 0
-                anet_max = max(self.ys_anet) if self.ys_anet else 1
+                # Set y-axis limits based on raw data (no smoothing)
+                anet_min = min(self.ys_anet_lower) if self.ys_anet_lower else 0
+                anet_max = max(self.ys_anet_upper) if self.ys_anet_upper else 1
                 anet_margin = (anet_max - anet_min) * 0.1 \
-                                if (anet_max - anet_min) > 0 else 1
-                self.ax_anet.set_ylim(max(-5, anet_min - anet_margin),
-                                      min(20, anet_max + anet_margin))
+                                    if (anet_max - anet_min) > 0 else 1
+                #self.ax_anet.set_ylim(max(-5, anet_min - anet_margin),
+                #                      min(20, anet_max + anet_margin))
+                self.ax_anet.set_ylim(-1, 15)
 
-                self.line_co2.set_data(self.xs, self.ys_co2)
+                # Update plot with raw data (no smoothing)
                 self.line_anet.set_data(self.xs, self.ys_anet)
 
-                lines = [self.line_anet, self.line_co2]
-                labels = [line.get_label() for line in lines]
+                # Remove previous envelope if it exists
+                if self.anet_fill is not None:
+                    self.anet_fill.remove()
+
+                # Fill between the raw upper and lower bounds (no smoothing)
+                self.anet_fill = self.ax_anet.fill_between(
+                    list(self.xs),
+                    list(self.ys_anet_lower),
+                    list(self.ys_anet_upper),
+                    color='#0b5345',
+                    alpha=0.2,
+                    label='95% CI'
+                )
+
+                # Update legend
+                lines = [self.line_anet, self.anet_fill]
+                labels = [line.get_label() for line in lines\
+                                if line.get_label() != '_nolegend_']
                 self.ax_anet.legend(lines, labels, loc="lower right")
 
-        return self.line_co2, self.line_anet
+        return self.line_anet, self.co2_text, self.anet_fill
 
 def calc_volume_litres(width_cm, height_cm, length_cm):
     volume_cm3 = width_cm * height_cm * length_cm
     volume_litres = volume_cm3 / 1000
-
     return volume_litres
 
 
@@ -178,7 +206,7 @@ if __name__ == "__main__":
                         help='Initial leaf area in cm²')
     parser.add_argument('--window_size', type=int,
                         help='Number of samples in slope estimation window',
-                        default=4)
+                        default=6)
     args = parser.parse_args()
 
     #port = "/dev/tty.usbmodem11201" # home computer
@@ -191,11 +219,10 @@ if __name__ == "__main__":
         pot_volume = calc_volume_litres(5, 10, 5)
         lunchbox_volume = 1.0 - pot_volume  # litres
 
-
     la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 25.0
     temp = args.temp
     window_size = args.window_size
 
     logger = LunchboxLogger(port, baud, lunchbox_volume, temp, la, window_size,
-                            measure_interval=10, timeout=1.0)
+                            measure_interval=5, timeout=1.0)
     logger.run()
