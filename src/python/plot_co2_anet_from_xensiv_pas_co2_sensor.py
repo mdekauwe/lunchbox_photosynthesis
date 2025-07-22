@@ -218,11 +218,12 @@ if __name__ == "__main__":
                         help='Initial leaf area in cm²')
     parser.add_argument('--window_size', type=int,
                         help='Number of samples in slope estimation window',
-                        default=6)
+                        default=10)
     args = parser.parse_args()
 
-    #port = "/dev/tty.usbmodem11201" # home computer
-    port = "/dev/tty.usbmodem101"   # work computer
+    # ls /dev/tty.*
+    port = "/dev/tty.usbmodem1101" # home computer
+    #port = "/dev/tty.usbmodem101"   # work computer
     baud = 9600
 
     if args.no_plant_pot:
@@ -236,5 +237,5 @@ if __name__ == "__main__":
     window_size = args.window_size
 
     logger = LunchboxLogger(port, baud, lunchbox_volume, temp, la, window_size,
-                            measure_interval=1, timeout=1.0)
+                            measure_interval=10, timeout=1.0)
     logger.run()
