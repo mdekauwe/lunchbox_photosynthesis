@@ -69,7 +69,7 @@ class LunchboxLogger:
         self.ax_anet.set_xlabel("Elapsed Time (min)")
         self.ax_anet.set_ylabel("Net assimilation rate (μmol m⁻² s⁻¹)",
                                 color="black")
-        self.ax_anet.set_ylim(-1, 15)
+        self.ax_anet.set_ylim(-1, 20)
         self.ax_anet.tick_params(axis="y", labelcolor="black")
         self.ax_anet.set_xlim(0, self.plot_duration_min)
 
@@ -162,7 +162,7 @@ class LunchboxLogger:
                                     if (anet_max - anet_min) > 0 else 1
                 #self.ax_anet.set_ylim(max(-5, anet_min - anet_margin),
                 #                      min(20, anet_max + anet_margin))
-                self.ax_anet.set_ylim(-1, 15)
+                self.ax_anet.set_ylim(-1, 20)
 
                 # Update plot with raw data (no smoothing)
                 self.line_anet.set_data(self.xs, self.ys_anet)
