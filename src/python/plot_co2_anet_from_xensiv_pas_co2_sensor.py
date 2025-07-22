@@ -7,6 +7,7 @@ from collections import deque
 import argparse
 import numpy as np
 import serial
+from scipy.signal import savgol_filter
 
 from xensiv_pas_co2_sensor import CO2Sensor
 
@@ -117,9 +118,19 @@ class LunchboxLogger:
                 time_array = np.array(self.time_window)
                 elapsed = time_array - time_array[0]
 
+                # Apply Savitzky-Golay filter to smooth CO₂ values
+                if len(co2_array) >= 5:
+                    co2_array_smooth = savgol_filter(co2_array, window_length=5,
+                                                     polyorder=2)
+                else:
+                    co2_array_smooth = co2_array
+
                 (p, residuals, rank,
                  singular_values,
-                 rcond) = np.polyfit(elapsed, co2_array, 1, full=True)
+                 rcond) = np.polyfit(elapsed, co2_array_smooth, 1, full=True)
+                #(p, residuals, rank,
+                # singular_values,
+                # rcond) = np.polyfit(elapsed, co2_array, 1, full=True)
                 slope = p[0]
                 intercept = p[1]
 
@@ -225,5 +236,5 @@ if __name__ == "__main__":
     window_size = args.window_size
 
     logger = LunchboxLogger(port, baud, lunchbox_volume, temp, la, window_size,
-                            measure_interval=5, timeout=1.0)
+                            measure_interval=1, timeout=1.0)
     logger.run()
