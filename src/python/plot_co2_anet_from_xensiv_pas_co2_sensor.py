@@ -26,7 +26,7 @@ class LunchboxLogger:
         self.measure_interval = measure_interval
         self.plot_duration_min = plot_duration_min
         self.plot_duration_s = plot_duration_min * 60
-        self.interval_ms = 200#60
+        self.interval_ms = 1000#200#60
         self.max_len = int(self.plot_duration_s / (self.interval_ms / 1000))
 
         # Data buffers
@@ -144,7 +144,8 @@ class LunchboxLogger:
                     # filter out
                     #cutoff = 0.01 # 1 cycle every 100 seconds
 
-                    cutoff = 0.05 # 1 cycle every 20 second
+                    cutoff = 0.025
+                    #cutoff = 0.05 # 1 cycle every 20 second
 
                     # could drop the order=4
                     # order = 6 needs a window size of 25
@@ -164,12 +165,15 @@ class LunchboxLogger:
                 if self.rolling_regression:
                     # Rolling linear regression
                     X = sm.add_constant(elapsed)
-                    model = sm.OLS(co2_array_filter, X)
+                    #model = sm.OLS(co2_array_filter, X)
+                    # less sensitive to outliers
+                    model = sm.RLM(co2_array_filter, X,
+                                   M=sm.robust.norms.HuberT())
                     results = model.fit()
 
                     slope = results.params[1]
                     intercept = results.params[0]
-
+                    print(f"slope: {slope:.5f} ppm/s")
                     # Calculate standard error of slope for 95% CI
                     stderr = results.bse[1] if results.bse.size > 1 else 0
                 else:
