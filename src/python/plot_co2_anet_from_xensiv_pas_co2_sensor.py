@@ -138,10 +138,9 @@ class LunchboxLogger:
 
                     # Hz — adjust based on oscillation frequency you want to
                     # filter out
-                    cutoff = 0.01 # 1 cycle every 100 seconds
+                    #cutoff = 0.01 # 1 cycle every 100 seconds
 
-                    # relaxing to this, ignore faster than 50 seconds
-                    # cutoff = 0.02
+                    cutoff = 0.05 # 1 cycle every 20 second
 
                     # could drop the order=4
                     # order = 6 needs a window size of 25
@@ -192,20 +191,23 @@ class LunchboxLogger:
                     max(0, elapsed_min - self.plot_duration_min),
                     elapsed_min)
 
-                # Set y-axis limits based on raw data (no smoothing)
-                anet_min = min(self.ys_anet_lower) if self.ys_anet_lower else 0
-                anet_max = max(self.ys_anet_upper) if self.ys_anet_upper else 1
-                anet_range = anet_max - anet_min
+                # Set y-axis limits based on upper and lower confidence bounds
+                if self.ys_anet_lower and self.ys_anet_upper:
+                    anet_min = min(self.ys_anet_lower)
+                    anet_max = max(self.ys_anet_upper)
+                    anet_range = anet_max - anet_min
 
-                if anet_range < 1.0:
-                    # Avoid too narrow range
-                    mean_val = (anet_max + anet_min) / 2
-                    self.ax_anet.set_ylim(mean_val - 1, mean_val + 1)
+                    if anet_range < 1.0:
+                        # Avoid too narrow range
+                        mean_val = (anet_max + anet_min) / 2
+                        self.ax_anet.set_ylim(mean_val - 1, mean_val + 1)
+                    else:
+                        anet_margin = anet_range * 0.1
+                        self.ax_anet.set_ylim(anet_min - anet_margin,
+                                              anet_max + anet_margin)
                 else:
-                    anet_margin = anet_range * 0.1
-                    self.ax_anet.set_ylim(anet_min - anet_margin,
-                                            anet_max + anet_margin)
-                #self.ax_anet.set_ylim(-5, 20)
+                    # Fallback if not enough data yet
+                    self.ax_anet.set_ylim(-5, 20)
 
                 # Update plot with raw data (no smoothing)
                 self.line_anet.set_data(self.xs, self.ys_anet)
@@ -257,7 +259,7 @@ if __name__ == "__main__":
                         help='Initial leaf area in cm²')
     parser.add_argument('--window_size', type=int,
                         help='Number of samples in slope estimation window',
-                        default=21) # must be off for smoothing filter
+                        default=31) # must be off for smoothing filter
     parser.add_argument('--no_smoothing', action='store_true',
                         help='Turn off Savitzky-Golay and Butterworth \
                               smoothing filters')
@@ -267,8 +269,8 @@ if __name__ == "__main__":
         raise ValueError("window_size must be an odd integer ≥ 5")
 
     # ls /dev/tty.*
-    port = "/dev/tty.usbmodem1101" # home computer
-    #port = "/dev/tty.usbmodem101"   # work computer
+    #port = "/dev/tty.usbmodem1101" # home computer
+    port = "/dev/tty.usbmodem101"   # work computer
     baud = 9600
 
     if args.no_plant_pot:
