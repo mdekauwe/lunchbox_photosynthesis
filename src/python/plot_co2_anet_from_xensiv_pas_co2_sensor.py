@@ -207,7 +207,7 @@ class LunchboxLogger:
                                               anet_max + anet_margin)
                 else:
                     # Fallback if not enough data yet
-                    self.ax_anet.set_ylim(-5, 20)
+                    self.ax_anet.set_ylim(-5, 8)
 
                 # Update plot with raw data (no smoothing)
                 self.line_anet.set_data(self.xs, self.ys_anet)
