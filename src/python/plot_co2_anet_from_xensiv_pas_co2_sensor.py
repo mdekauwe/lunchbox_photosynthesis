@@ -8,13 +8,15 @@ import argparse
 import numpy as np
 import serial
 from scipy.signal import savgol_filter, butter, filtfilt
+import statsmodels.api as sm
 
 from xensiv_pas_co2_sensor import CO2Sensor
 
 class LunchboxLogger:
     def __init__(self, port, baud, lunchbox_volume, temp_c, leaf_area_cm2,
                  window_size, measure_interval=10, timeout=1.0,
-                 plot_duration_min=10, smoothing=True):
+                 plot_duration_min=10, smoothing=True,
+                 rolling_regression=False):
 
         self.temp_k = temp_c + 273.15
         self.pressure = 101325.  # Pa
@@ -45,6 +47,7 @@ class LunchboxLogger:
             self.sensor.close()
             raise
         self.smoothing = smoothing
+        self.rolling_regression = rolling_regression
 
         # Plot setup
         self.fig, self.ax_anet = plt.subplots(figsize=(12, 6))
@@ -123,10 +126,11 @@ class LunchboxLogger:
                 if self.smoothing and len(co2_array) >= self.window_size:
                     # Apply Savitzky-Golay filter to smooth CO2 values, but
                     # preserve peaks and slopes, i.e., stabilize deltaCO2 vs
-                    # time slope
+                    # time slope. Using polyorder=2 vs 3 seems to have
+                    # smoothed out the high-frequency noise more gently
                     co2_array_smooth = savgol_filter(co2_array,
                                                 window_length=self.window_size,
-                                                polyorder=3)
+                                                polyorder=2)
 
                     # Use a Butterworth low-pass to remove the remaining
                     # cyclical noise that seems to be associated with the
@@ -148,23 +152,42 @@ class LunchboxLogger:
                     co2_array_filter = butter_lowpass_filter(co2_array_smooth,
                                                              cutoff, fs,
                                                              order=4)
+
+                    #co2_array_filter = butter_bandpass_filter(co2_array_smooth,
+                    #                      lowcut=0.003,  # ~5.5 min
+                    #                      highcut=0.05,  # ~20 sec
+                    #                      fs=1.0,        # 1 Hz sampling
+                    #                      order=4)
                 else:
                     co2_array_filter = co2_array
 
-                (p, residuals, rank,
-                 singular_values,
-                 rcond) = np.polyfit(elapsed, co2_array_filter, 1, full=True)
+                if self.rolling_regression:
+                    # Rolling linear regression
+                    X = sm.add_constant(elapsed)
+                    model = sm.OLS(co2_array_filter, X)
+                    results = model.fit()
 
-                slope = p[0]
-                intercept = p[1]
+                    slope = results.params[1]
+                    intercept = results.params[0]
 
-                n = len(elapsed)
-                if n > 2 and residuals.size > 0:
-                    residual_var = residuals[0] / (n - 2)
-                    x_var = np.var(elapsed, ddof=1)
-                    stderr = np.sqrt(residual_var / (n * x_var))
+                    # Calculate standard error of slope for 95% CI
+                    stderr = results.bse[1] if results.bse.size > 1 else 0
                 else:
-                    stderr = 0
+                    (p, residuals, rank,
+                     singular_values,
+                     rcond) = np.polyfit(elapsed, co2_array_filter, 1,
+                                         full=True)
+
+                    slope = p[0]
+                    intercept = p[1]
+
+                    n = len(elapsed)
+                    if n > 2 and residuals.size > 0:
+                        residual_var = residuals[0] / (n - 2)
+                        x_var = np.var(elapsed, ddof=1)
+                        stderr = np.sqrt(residual_var / (n * x_var))
+                    else:
+                        stderr = 0
 
                 slope_upper = slope + 1.96 * stderr
                 slope_lower = slope - 1.96 * stderr
@@ -191,23 +214,29 @@ class LunchboxLogger:
                     max(0, elapsed_min - self.plot_duration_min),
                     elapsed_min)
 
-                # Set y-axis limits based on upper and lower confidence bounds
                 if self.ys_anet_lower and self.ys_anet_upper:
-                    anet_min = min(self.ys_anet_lower)
-                    anet_max = max(self.ys_anet_upper)
-                    anet_range = anet_max - anet_min
+                    # Filter values based on visible x range
+                    x_min = max(0, elapsed_min - self.plot_duration_min)
 
-                    if anet_range < 1.0:
-                        # Avoid too narrow range
-                        mean_val = (anet_max + anet_min) / 2
-                        self.ax_anet.set_ylim(mean_val - 1, mean_val + 1)
+                    visible_vals_l = [y for x, y in zip(self.xs, \
+                                            self.ys_anet_lower) if x >= x_min]
+                    visible_vals_u = [y for x, y in zip(self.xs, \
+                                            self.ys_anet_upper) if x >= x_min]
+
+                    if visible_vals_l and visible_vals_u:
+                        anet_min = min(visible_vals_l)
+                        anet_max = max(visible_vals_u)
+                        anet_range = anet_max - anet_min
+
+                        if anet_range < 1.0:
+                            mean_val = (anet_max + anet_min) / 2
+                            self.ax_anet.set_ylim(mean_val - 1, mean_val + 1)
+                        else:
+                            margin = anet_range * 0.1
+                            self.ax_anet.set_ylim(anet_min - margin,
+                                                  anet_max + margin)
                     else:
-                        anet_margin = anet_range * 0.1
-                        self.ax_anet.set_ylim(anet_min - anet_margin,
-                                              anet_max + anet_margin)
-                else:
-                    # Fallback if not enough data yet
-                    self.ax_anet.set_ylim(-5, 8)
+                        self.ax_anet.set_ylim(-5, 8)
 
                 # Update plot with raw data (no smoothing)
                 self.line_anet.set_data(self.xs, self.ys_anet)
@@ -241,12 +270,23 @@ def calc_volume_litres(width_cm, height_cm, length_cm):
     return volume_litres
 
 def butter_lowpass_filter(data, cutoff, fs, order=4):
+    # suppress high-frequency sensor noise but keep long-period oscillations
     nyq = 0.5 * fs
     normal_cutoff = cutoff / nyq
     b, a = butter(order, normal_cutoff, btype='low', analog=False)
     y = filtfilt(b, a, data)
 
     return y
+
+def butter_bandpass_filter(data, lowcut, highcut, fs, order=4):
+    # Band-pass filter to exclude both high- and low-frequency components, with
+    # the aim of keeping only the plant signal changes in co2
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = highcut / nyq
+    b, a = butter(order, [low, high], btype='band')
+
+    return filtfilt(b, a, data)
 
 if __name__ == "__main__":
 
@@ -263,6 +303,8 @@ if __name__ == "__main__":
     parser.add_argument('--no_smoothing', action='store_true',
                         help='Turn off Savitzky-Golay and Butterworth \
                               smoothing filters')
+    parser.add_argument('--rolling_regression', action='store_true',
+                        help='Use rolling linear regression (statsmodels)')
     args = parser.parse_args()
 
     if args.window_size % 2 == 0 or args.window_size < 5:
@@ -285,5 +327,6 @@ if __name__ == "__main__":
 
     logger = LunchboxLogger(port, baud, lunchbox_volume, temp, la, window_size,
                             measure_interval=1, timeout=1.0,
-                            smoothing=not args.no_smoothing)
+                            smoothing=not args.no_smoothing,
+                            rolling_regression=args.rolling_regression)
     logger.run()
