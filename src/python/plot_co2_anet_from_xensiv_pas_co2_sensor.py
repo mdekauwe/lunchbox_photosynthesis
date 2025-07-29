@@ -337,7 +337,7 @@ if __name__ == "__main__":
     window_size = args.window_size
 
     logger = LunchboxLogger(port, baud, lunchbox_volume, temp, la, window_size,
-                            measure_interval=1, timeout=1.0,
+                            measure_interval=2, timeout=1.0,
                             smoothing=not args.no_smoothing,
                             rolling_regression=args.rolling_regression)
     logger.run()
