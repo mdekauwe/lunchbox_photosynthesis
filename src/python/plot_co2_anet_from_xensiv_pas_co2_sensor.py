@@ -129,8 +129,8 @@ class LunchboxLogger:
                     # time slope. Using polyorder=2 vs 3 seems to have
                     # smoothed out the high-frequency noise more gently
                     co2_array_smooth = savgol_filter(co2_array,
-                                                window_length=self.window_size,
-                                                polyorder=2)
+                                                window_length=15,
+                                                polyorder=3)
 
                     # Use a Butterworth low-pass to remove the remaining
                     # cyclical noise that seems to be associated with the
@@ -142,9 +142,9 @@ class LunchboxLogger:
 
                     # Hz — adjust based on oscillation frequency you want to
                     # filter out
-                    #cutoff = 0.01 # 1 cycle every 100 seconds
+                    cutoff = 0.01 # 1 cycle every 100 seconds
 
-                    cutoff = 0.025
+                    #cutoff = 0.025
                     #cutoff = 0.05 # 1 cycle every 20 second
 
                     # could drop the order=4
@@ -213,6 +213,10 @@ class LunchboxLogger:
                 self.ys_anet_lower.append(anet_area_l)
                 self.ys_anet_upper.append(anet_area_u)
 
+                # Smooth Anet data for plotting
+                anet_series = pd.Series(self.ys_anet)
+                anet_smooth = anet_series.rolling(window=5, center=True).mean()
+
                 # Set x-axis limits for moving window
                 self.ax_anet.set_xlim(
                     max(0, elapsed_min - self.plot_duration_min),
@@ -242,8 +246,11 @@ class LunchboxLogger:
                     else:
                         self.ax_anet.set_ylim(-5, 8)
 
-                # Update plot with raw data (no smoothing)
-                self.line_anet.set_data(self.xs, self.ys_anet)
+                # Update plot with raw data
+                #self.line_anet.set_data(self.xs, self.ys_anet)
+
+                # Update plot with smoothed Anet
+                self.line_anet.set_data(self.xs, anet_smooth)
 
                 # Remove previous envelope if it exists
                 if self.anet_fill is not None:
