@@ -38,6 +38,18 @@ class ForcedCalibration:
         if resp[0] != 0x06:
             raise RuntimeError(f"Sensor NAK or error response: 0x{resp[0]:02X}")
 
+    def soft_reset(self, ser):
+        self._write_register(ser, 0x10, 0xA3)
+        time.sleep(0.2)
+
+    def reset_forced_compensation(self, ser):
+        self._write_register(ser, 0x10, 0xFC)
+        time.sleep(0.1)
+
+    def reset_aboc(self, ser):
+        self._write_register(ser, 0x10, 0xBC)
+        time.sleep(0.1)
+
     def run(self, baseline_ppm: int) -> None:
         """
         Perform forced calibration by writing the baseline offset ppm value
@@ -56,12 +68,14 @@ class ForcedCalibration:
 
         with serial.Serial(self.port, self.baud, timeout=self.timeout) as ser:
             time.sleep(0.2)
+            self.soft_reset(ser)
+            self.reset_forced_compensation(ser)
+            self.reset_aboc(ser)
             self._write_register(ser, 0x0D, high_byte)
             time.sleep(0.05)
             self._write_register(ser, 0x0E, low_byte)
             time.sleep(0.05)
             self._write_register(ser, 0x10, 0xCF)
-
 
 if __name__ == "__main__":
 
