@@ -24,12 +24,16 @@ class CO2Sensor:
         if resp != b"\x06\n":
             raise RuntimeError(f"Write failed, response: {resp}")
 
-    def arm_sensor(self):
-        self.write_register("04", "00")
-        self.write_register("02", "00")
-        self.write_register("03", "0A")
-        self.write_register("04", "02")
-        time.sleep(12)
+    def arm_sensor(self, rate_seconds=10):
+        if not (1 <= rate_seconds <= 60):
+            raise ValueError("Rate must be between 1–60 seconds")
+        rate_hex = f"{rate_seconds:02X}"
+
+        self.write_register("04", "00")  # Stop measurements
+        self.write_register("02", "00")  # Disable interrupts
+        self.write_register("03", rate_hex)  # Set desired measurement rate
+        self.write_register("04", "02")  # Start continuous measurement
+        time.sleep(rate_seconds + 2)  # wait for first fresh sample
 
     def send_command(self, cmd):
         self.ser.write(cmd.encode("ascii"))
@@ -41,6 +45,9 @@ class CO2Sensor:
         return self.ser.readline().strip()
 
     def read_co2(self):
+        if not self.is_data_ready():
+            raise RuntimeError("No new CO₂ data available")
+
         self.send_command("R,05\n")
         msb_resp = self.read_response()
         if not msb_resp or len(msb_resp) < 2:
@@ -55,3 +62,11 @@ class CO2Sensor:
 
         combined = (msb << 8) | lsb
         return combined - 0x10000 if combined & 0x8000 else combined
+
+    def is_data_ready(self):
+        self.send_command("R,03\n")
+        status_resp = self.read_response()
+        if not status_resp or len(status_resp) < 2:
+            return False
+        status = int(status_resp.decode("ascii"), 16)
+        return (status & 0x01) == 1  # Bit 0 = new data ready

@@ -42,7 +42,7 @@ class LunchboxLogger:
         # Setup sensor
         self.sensor = CO2Sensor(port, baud, timeout)
         try:
-            self.sensor.arm_sensor()
+            self.sensor.arm_sensor(rate_seconds=self.measure_interval)
         except Exception as e:
             print(f"Failed to arm sensor: {e}")
             self.sensor.close()
@@ -121,8 +121,9 @@ class LunchboxLogger:
             if len(self.co2_window) >= self.window_size:
                 co2_array = np.array(self.co2_window)
                 time_array = np.array(self.time_window)
-                elapsed = np.round(time_array - time_array[0], 2)
-                elapsed -= elapsed.mean() # centre
+                elapsed = time_array - time_array[0]
+                elapsed = np.round(elapsed, 2)
+                elapsed -= elapsed.mean()
 
 
                 if self.smoothing and len(co2_array) >= self.window_size:
