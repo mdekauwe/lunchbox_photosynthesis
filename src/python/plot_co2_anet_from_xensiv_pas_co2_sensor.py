@@ -122,6 +122,8 @@ class LunchboxLogger:
                 co2_array = np.array(self.co2_window)
                 time_array = np.array(self.time_window)
                 elapsed = np.round(time_array - time_array[0], 2)
+                elapsed -= elapsed.mean() # centre
+
 
                 if self.smoothing and len(co2_array) >= self.window_size:
                     # Apply Savitzky-Golay filter to smooth CO2 values, but
