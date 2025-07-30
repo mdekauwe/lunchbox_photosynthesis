@@ -10,6 +10,7 @@ import serial
 from scipy.signal import savgol_filter, butter, filtfilt
 import statsmodels.api as sm
 import pandas as pd
+from serial_port_finder import find_usb_port
 
 from xensiv_pas_co2_sensor import CO2Sensor
 
@@ -333,7 +334,8 @@ if __name__ == "__main__":
 
     # ls /dev/tty.*
     #port = "/dev/tty.usbmodem1101" # home computer
-    port = "/dev/tty.usbmodem1101"   # work computer
+    #port = "/dev/tty.usbmodem1101"   # work computer
+    port = find_usbmodem_port()
     baud = 9600
 
     if args.no_plant_pot:
