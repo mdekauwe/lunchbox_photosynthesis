@@ -9,6 +9,7 @@ import numpy as np
 import serial
 from scipy.signal import savgol_filter, butter, filtfilt
 import statsmodels.api as sm
+import pandas as pd
 
 from xensiv_pas_co2_sensor import CO2Sensor
 
@@ -129,8 +130,8 @@ class LunchboxLogger:
                     # time slope. Using polyorder=2 vs 3 seems to have
                     # smoothed out the high-frequency noise more gently
                     co2_array_smooth = savgol_filter(co2_array,
-                                                window_length=15,
-                                                polyorder=3)
+                                                     window_length=15,
+                                                     polyorder=2)
 
                     # Use a Butterworth low-pass to remove the remaining
                     # cyclical noise that seems to be associated with the
@@ -142,10 +143,10 @@ class LunchboxLogger:
 
                     # Hz — adjust based on oscillation frequency you want to
                     # filter out
-                    cutoff = 0.01 # 1 cycle every 100 seconds
+                    #cutoff = 0.01 # 1 cycle every 100 seconds
 
                     #cutoff = 0.025
-                    #cutoff = 0.05 # 1 cycle every 20 second
+                    cutoff = 0.05 # 1 cycle every 20 second
 
                     # could drop the order=4
                     # order = 6 needs a window size of 25
@@ -167,6 +168,7 @@ class LunchboxLogger:
                     X = sm.add_constant(elapsed)
                     #model = sm.OLS(co2_array_filter, X)
                     # less sensitive to outliers
+                    print(elapsed)
                     model = sm.RLM(co2_array_filter, X,
                                    M=sm.robust.norms.HuberT())
                     results = model.fit()
@@ -177,6 +179,7 @@ class LunchboxLogger:
                     # Calculate standard error of slope for 95% CI
                     stderr = results.bse[1] if results.bse.size > 1 else 0
                 else:
+                    elapsed = np.round(elapsed, 2)
                     (p, residuals, rank,
                      singular_values,
                      rcond) = np.polyfit(elapsed, co2_array_filter, 1,
@@ -214,8 +217,8 @@ class LunchboxLogger:
                 self.ys_anet_upper.append(anet_area_u)
 
                 # Smooth Anet data for plotting
-                anet_series = pd.Series(self.ys_anet)
-                anet_smooth = anet_series.rolling(window=5, center=True).mean()
+                #anet_series = pd.Series(self.ys_anet)
+                #anet_smooth = anet_series.rolling(window=5, center=True).mean()
 
                 # Set x-axis limits for moving window
                 self.ax_anet.set_xlim(
@@ -247,10 +250,10 @@ class LunchboxLogger:
                         self.ax_anet.set_ylim(-5, 8)
 
                 # Update plot with raw data
-                #self.line_anet.set_data(self.xs, self.ys_anet)
+                self.line_anet.set_data(self.xs, self.ys_anet)
 
                 # Update plot with smoothed Anet
-                self.line_anet.set_data(self.xs, anet_smooth)
+                #self.line_anet.set_data(self.xs, anet_smooth)
 
                 # Remove previous envelope if it exists
                 if self.anet_fill is not None:
@@ -323,7 +326,7 @@ if __name__ == "__main__":
 
     # ls /dev/tty.*
     #port = "/dev/tty.usbmodem1101" # home computer
-    port = "/dev/tty.usbmodem101"   # work computer
+    port = "/dev/tty.usbmodem1101"   # work computer
     baud = 9600
 
     if args.no_plant_pot:
@@ -337,7 +340,7 @@ if __name__ == "__main__":
     window_size = args.window_size
 
     logger = LunchboxLogger(port, baud, lunchbox_volume, temp, la, window_size,
-                            measure_interval=2, timeout=1.0,
+                            measure_interval=1, timeout=1.0,
                             smoothing=not args.no_smoothing,
                             rolling_regression=args.rolling_regression)
     logger.run()
