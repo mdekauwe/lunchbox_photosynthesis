@@ -121,8 +121,7 @@ class LunchboxLogger:
             if len(self.co2_window) >= self.window_size:
                 co2_array = np.array(self.co2_window)
                 time_array = np.array(self.time_window)
-                elapsed = time_array - time_array[0]
-
+                elapsed = np.round(time_array - time_array[0], 2)
 
                 if self.smoothing and len(co2_array) >= self.window_size:
                     # Apply Savitzky-Golay filter to smooth CO2 values, but
@@ -168,7 +167,7 @@ class LunchboxLogger:
                     X = sm.add_constant(elapsed)
                     #model = sm.OLS(co2_array_filter, X)
                     # less sensitive to outliers
-                    print(elapsed)
+
                     model = sm.RLM(co2_array_filter, X,
                                    M=sm.robust.norms.HuberT())
                     results = model.fit()
@@ -179,7 +178,7 @@ class LunchboxLogger:
                     # Calculate standard error of slope for 95% CI
                     stderr = results.bse[1] if results.bse.size > 1 else 0
                 else:
-                    elapsed = np.round(elapsed, 2)
+
                     (p, residuals, rank,
                      singular_values,
                      rcond) = np.polyfit(elapsed, co2_array_filter, 1,
