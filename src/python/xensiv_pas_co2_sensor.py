@@ -20,8 +20,8 @@ class CO2Sensor:
         self.ser.write(cmd.encode("ascii"))
         self.ser.flush()
         time.sleep(0.1)
-        resp = self.ser.read(2)
-        if resp != b"\x06\n":
+        resp = self.read_response()
+        if resp not in [b"OK", b"\x06"]:
             raise RuntimeError(f"Write failed, response: {resp}")
 
     def arm_sensor(self, rate_seconds=10):
@@ -43,6 +43,10 @@ class CO2Sensor:
     def read_response(self, timeout=1.0):
         self.ser.timeout = timeout
         return self.ser.readline().strip()
+
+    def reset_sensor(self):
+        self.write_register("07", "FF")  # Clear IRQ/status bits
+        time.sleep(0.1)
 
     def read_co2(self):
         if not self.is_data_ready():
