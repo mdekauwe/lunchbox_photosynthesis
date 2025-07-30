@@ -43,6 +43,7 @@ class LunchboxLogger:
         self.sensor = CO2Sensor(port, baud, timeout)
         try:
             self.sensor.reset_sensor()
+            self.sensor.set_pressure_reference(101325)  # default was 900 hpa
             self.sensor.arm_sensor(rate_seconds=self.measure_interval)
         except Exception as e:
             print(f"Failed to arm sensor: {e}")

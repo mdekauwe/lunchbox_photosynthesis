@@ -74,3 +74,14 @@ class CO2Sensor:
             return False
         status = int(status_resp.decode("ascii"), 16)
         return (status & 0x01) == 1  # Bit 0 = new data ready
+
+    def set_pressure_reference(self, pressure_pa: int):
+        pressure_hpa = int(pressure_pa / 100)
+        high_byte = (pressure_hpa >> 8) & 0xFF
+        low_byte = pressure_hpa & 0xFF
+
+        # Convert register addresses to strings as expected by write_register
+        self.write_register("0F", f"{high_byte:02X}")
+        time.sleep(0.05)
+        self.write_register("10", f"{low_byte:02X}")
+        time.sleep(0.05)
