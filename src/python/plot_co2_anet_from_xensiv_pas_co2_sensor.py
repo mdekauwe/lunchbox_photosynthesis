@@ -113,6 +113,9 @@ class LunchboxLogger:
                 co2 = self.sensor.read_co2()
                 self.last_measure_time = current_time
                 self.co2_text.set_text(f"CO₂ = {co2:.0f} ppm")
+
+                # Re-apply pressure compensation here every measurement
+                self.sensor.set_pressure_reference(self.pressure)
             except Exception as e:
                 print(f"Read error: {e}")
                 return self.line_anet, self.co2_text

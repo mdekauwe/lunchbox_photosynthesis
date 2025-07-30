@@ -52,20 +52,29 @@ class CO2Sensor:
         if not self.is_data_ready():
             raise RuntimeError("No new CO₂ data available")
 
-        self.send_command("R,05\n")
-        msb_resp = self.read_response()
-        if not msb_resp or len(msb_resp) < 2:
-            raise RuntimeError(f"MSB response invalid: {msb_resp}")
-        msb = int(msb_resp.decode("ascii"), 16)
+        try:
+            self.send_command("R,05\n")
+            msb_resp = self.read_response()
+            if not msb_resp or len(msb_resp) < 2:
+                raise RuntimeError(f"MSB response invalid: {msb_resp}")
+            msb = int(msb_resp.decode("ascii"), 16)
 
-        self.send_command("R,06\n")
-        lsb_resp = self.read_response()
-        if not lsb_resp or len(lsb_resp) < 2:
-            raise RuntimeError(f"LSB response invalid: {lsb_resp}")
-        lsb = int(lsb_resp.decode("ascii"), 16)
+            self.send_command("R,06\n")
+            lsb_resp = self.read_response()
+            if not lsb_resp or len(lsb_resp) < 2:
+                raise RuntimeError(f"LSB response invalid: {lsb_resp}")
+            lsb = int(lsb_resp.decode("ascii"), 16)
 
-        combined = (msb << 8) | lsb
-        return combined - 0x10000 if combined & 0x8000 else combined
+            combined = (msb << 8) | lsb
+            return combined - 0x10000 if combined & 0x8000 else combined
+        except:
+            # If communication error, retry once after a delay
+            if max_retries > 0 and "invalid" in str(e).lower():
+                time.sleep(retry_delay)
+                return self.read_co2(retry_delay=retry_delay,
+                                     max_retries=max_retries-1)
+            else:
+                raise
 
     def is_data_ready(self):
         self.send_command("R,03\n")
