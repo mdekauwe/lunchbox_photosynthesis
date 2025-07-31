@@ -335,7 +335,7 @@ if __name__ == "__main__":
     # ls /dev/tty.*
     #port = "/dev/tty.usbmodem1101" # home computer
     #port = "/dev/tty.usbmodem1101"   # work computer
-    port = find_usbmodem_port()
+    port = find_usb_port()
     baud = 9600
 
     if args.no_plant_pot:
