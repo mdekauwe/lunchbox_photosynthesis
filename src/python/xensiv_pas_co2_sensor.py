@@ -2,7 +2,7 @@ import serial
 import time
 
 class CO2Sensor:
-    def __init__(self, port, baud=9600, timeout=1.0):
+    def __init__(self, port, baud=9600, timeout=1.5):
 
         self.ser = serial.Serial(port, baudrate=baud, bytesize=serial.EIGHTBITS,
                                  parity=serial.PARITY_NONE,
@@ -40,15 +40,19 @@ class CO2Sensor:
         self.ser.flush()
         time.sleep(0.05)
 
-    def read_response(self, timeout=1.0):
-        self.ser.timeout = timeout
-        return self.ser.readline().strip()
+    def read_response(self, max_retries=2, retry_delay=0.1):
+        for attempt in range(max_retries + 1):
+            response = self.ser.readline().strip()
+            if response:
+                return response
+            time.sleep(retry_delay)
+        raise RuntimeError("Write failed: no response after retries")
 
     def reset_sensor(self):
         self.write_register("07", "FF")  # Clear IRQ/status bits
         time.sleep(0.1)
 
-    def read_co2(self):
+    def read_co2(self, max_retries=1, retry_delay=0.2):
         if not self.is_data_ready():
             raise RuntimeError("No new CO₂ data available")
 
@@ -67,14 +71,15 @@ class CO2Sensor:
 
             combined = (msb << 8) | lsb
             return combined - 0x10000 if combined & 0x8000 else combined
-        except:
-            # If communication error, retry once after a delay
+
+        except Exception as e:
             if max_retries > 0 and "invalid" in str(e).lower():
                 time.sleep(retry_delay)
-                return self.read_co2(retry_delay=retry_delay,
-                                     max_retries=max_retries-1)
+                return self.read_co2(max_retries=max_retries-1,
+                                     retry_delay=retry_delay)
             else:
                 raise
+
 
     def is_data_ready(self):
         self.send_command("R,03\n")

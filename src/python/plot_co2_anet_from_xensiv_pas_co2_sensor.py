@@ -45,6 +45,7 @@ class LunchboxLogger:
         try:
             self.sensor.reset_sensor()
             self.sensor.set_pressure_reference(101325)  # default was 900 hpa
+            time.sleep(2)
             self.sensor.arm_sensor(rate_seconds=self.measure_interval)
         except Exception as e:
             print(f"Failed to arm sensor: {e}")
@@ -112,6 +113,10 @@ class LunchboxLogger:
         if (current_time - self.last_measure_time) >= self.measure_interval:
             try:
                 co2 = self.sensor.read_co2()
+                #
+
+                print(f"DEBUG: CO₂ value read = {co2}")
+
                 self.last_measure_time = current_time
                 self.co2_text.set_text(f"CO₂ = {co2:.0f} ppm")
 
