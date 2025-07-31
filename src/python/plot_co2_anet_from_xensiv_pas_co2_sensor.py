@@ -113,10 +113,6 @@ class LunchboxLogger:
         if (current_time - self.last_measure_time) >= self.measure_interval:
             try:
                 co2 = self.sensor.read_co2()
-                #
-
-                print(f"DEBUG: CO₂ value read = {co2}")
-
                 self.last_measure_time = current_time
                 self.co2_text.set_text(f"CO₂ = {co2:.0f} ppm")
 
