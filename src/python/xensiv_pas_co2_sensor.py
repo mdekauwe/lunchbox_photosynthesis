@@ -52,34 +52,30 @@ class CO2Sensor:
         self.write_register("07", "FF")  # Clear IRQ/status bits
         time.sleep(0.1)
 
-    def read_co2(self, max_retries=1, retry_delay=0.2):
+    def read_co2(self, max_retries=2, retry_delay=0.2):
         if not self.is_data_ready():
-            raise RuntimeError("No new CO₂ data available")
+            raise RuntimeError("No new CO2 data available")
 
         try:
             self.send_command("R,05\n")
             msb_resp = self.read_response()
-            if not msb_resp or len(msb_resp) < 2:
-                raise RuntimeError(f"MSB response invalid: {msb_resp}")
             msb = int(msb_resp.decode("ascii"), 16)
 
             self.send_command("R,06\n")
             lsb_resp = self.read_response()
-            if not lsb_resp or len(lsb_resp) < 2:
-                raise RuntimeError(f"LSB response invalid: {lsb_resp}")
             lsb = int(lsb_resp.decode("ascii"), 16)
 
             combined = (msb << 8) | lsb
             return combined - 0x10000 if combined & 0x8000 else combined
 
         except Exception as e:
-            if max_retries > 0 and "invalid" in str(e).lower():
+            if max_retries > 0:
+                print(f"Retrying CO2 read due to error: {e}")
                 time.sleep(retry_delay)
                 return self.read_co2(max_retries=max_retries-1,
                                      retry_delay=retry_delay)
             else:
                 raise
-
 
     def is_data_ready(self):
         self.send_command("R,03\n")

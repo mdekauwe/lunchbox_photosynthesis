@@ -39,6 +39,7 @@ class LunchboxLogger:
         self.co2_window = deque(maxlen=window_size)
         self.time_window = deque(maxlen=window_size)
         self.anet_fill = None
+        self.last_co2 = None
 
         # Setup sensor
         self.sensor = CO2Sensor(port, baud, timeout)
@@ -113,7 +114,23 @@ class LunchboxLogger:
         if (current_time - self.last_measure_time) >= self.measure_interval:
             try:
                 co2 = self.sensor.read_co2()
+
+                # If the read is the same as previous (and measure_interval
+                # is > 1s), it's possibly a stale value — skip.
+                if self.last_co2 is not None and co2 == self.last_co2:
+                    print("Warning: stale CO₂ value, skipping update.")
+                    return self.line_anet, self.co2_text
+
+                # Need to put this on a flag or they won't be able to do
+                # "co2 response curves"
+                #if (len(self.co2_window) > 0 and
+                #    abs(co2 - self.co2_window[-1]) > 70):
+                #    print(f"Warning: abrupt CO₂ change detected")
+                #    print(f"(delta={co2 - self.co2_window[-1]} ppm), skipping.")
+                #    return self.line_anet, self.co2_text
+
                 self.last_measure_time = current_time
+                self.last_co2 = co2
                 self.co2_text.set_text(f"CO₂ = {co2:.0f} ppm")
 
                 # Re-apply pressure compensation here every measurement
