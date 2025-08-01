@@ -127,7 +127,7 @@ class LunchboxLogger:
                 self.co2_text.set_text(f"CO2 = {co2:.0f} ppm")
 
                 # Re-apply pressure compensation here every measurement
-                self.sensor.set_pressure_reference(self.pressure)
+                #self.sensor.set_pressure_reference(self.pressure)
             except Exception as e:
                 print(f"Read error: {e}")
                 if self.last_co2 is not None:
@@ -155,36 +155,31 @@ class LunchboxLogger:
                     # time slope. Using polyorder=2 vs 3 seems to have
                     # smoothed out the high-frequency noise more gently
                     co2_array_smooth = savgol_filter(co2_array,
-                                                     window_length=15,
+                                                     window_length=19,
                                                      polyorder=2)
 
-                    # Use a Butterworth low-pass to remove the remaining
-                    # cyclical noise that seems to be associated with the
-                    # co2 sensor, i.e., when we don't have a plant in the box
+                    # Use filters to suppress the sensor noise which is causing
+                    # cyclical oscillations (evident when we don't have a plant
+                    # in the box
 
                     # sampling frequency in Hz (e.g., 0.5 Hz if
                     # measure_interval=2)
                     fs = 1 / self.measure_interval
 
-                    # Hz — adjust based on oscillation frequency you want to
-                    # filter out
                     #cutoff = 0.01 # 1 cycle every 100 seconds
+                    cutoff = 0.02
+                    #cutoff = 0.05 # 1 cycle every 20 second
 
-                    #cutoff = 0.025
-                    cutoff = 0.05 # 1 cycle every 20 second
+                    co2_array_filter = butter_bandstop_filter(co2_array_smooth,
+                                                              lowcut=0.028,
+                                                              highcut=0.034,
+                                                              fs=fs,
+                                                              order=4)
 
-                    # could drop the order=4
-                    # order = 6 needs a window size of 25
-                    # order = 4 works fine with 21
                     co2_array_filter = butter_lowpass_filter(co2_array_smooth,
                                                              cutoff, fs,
                                                              order=4)
 
-                    #co2_array_filter = butter_bandpass_filter(co2_array_smooth,
-                    #                      lowcut=0.003,  # ~5.5 min
-                    #                      highcut=0.05,  # ~20 sec
-                    #                      fs=1.0,        # 1 Hz sampling
-                    #                      order=4)
                 else:
                     co2_array_filter = co2_array
 
@@ -317,15 +312,15 @@ def butter_lowpass_filter(data, cutoff, fs, order=4):
 
     return y
 
-def butter_bandpass_filter(data, lowcut, highcut, fs, order=4):
-    # Band-pass filter to exclude both high- and low-frequency components, with
-    # the aim of keeping only the plant signal changes in co2
+def butter_bandstop_filter(data, lowcut, highcut, fs, order=4):
+    # Apply a Butterworth band-stop filter to removes periodic oscillations
     nyq = 0.5 * fs
     low = lowcut / nyq
     high = highcut / nyq
-    b, a = butter(order, [low, high], btype='band')
+    b, a = butter(order, [low, high], btype='bandstop', analog=False)
+    filtered_data = filtfilt(b, a, data)
 
-    return filtfilt(b, a, data)
+    return filtered_data
 
 if __name__ == "__main__":
 
@@ -366,7 +361,10 @@ if __name__ == "__main__":
     window_size = args.window_size
 
     logger = LunchboxLogger(port, baud, lunchbox_volume, temp, la, window_size,
-                            measure_interval=1, timeout=1.0,
+                            measure_interval=2, timeout=1.0,
                             smoothing=not args.no_smoothing,
                             rolling_regression=args.rolling_regression)
     logger.run()
+
+
+    # Does making measure_interval=3 to 5 reduce noise?
