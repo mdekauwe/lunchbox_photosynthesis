@@ -176,8 +176,15 @@ class LunchboxLogger:
                                                               highcut=0.034,
                                                               fs=fs,
                                                               order=4)
+
+                    # remove oscillations around 0.015 Hz~ 60 seconds
+                    #co2_array_filter = butter_bandstop_filter(co2_array_filter,
+                    #                                          lowcut=0.012,
+                    #                                          highcut=0.018,
+                    #                                          fs=1.0)
+
                     # remove high frequency noise
-                    co2_array_filter = butter_lowpass_filter(co2_array_smooth,
+                    co2_array_filter = butter_lowpass_filter(co2_array_filter,
                                                              cutoff, fs,
                                                              order=4)
 
