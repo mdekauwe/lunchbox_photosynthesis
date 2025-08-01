@@ -7,7 +7,7 @@ from collections import deque
 import argparse
 import numpy as np
 import serial
-from scipy.signal import savgol_filter, butter, filtfilt
+from scipy.signal import savgol_filter, butter, filtfilt, medfilt
 import statsmodels.api as sm
 import pandas as pd
 from serial_port_finder import find_usb_port
@@ -150,11 +150,15 @@ class LunchboxLogger:
 
 
                 if self.smoothing and len(co2_array) >= self.window_size:
+
+                    # killssudden jumps/steps due to quantisation
+                    co2_array_2 = medfilt(co2_array, kernel_size=5)
+
                     # Apply Savitzky-Golay filter to smooth CO2 values, but
                     # preserve peaks and slopes, i.e., stabilize deltaCO2 vs
                     # time slope. Using polyorder=2 vs 3 seems to have
                     # smoothed out the high-frequency noise more gently
-                    co2_array_smooth = savgol_filter(co2_array,
+                    co2_array_smooth = savgol_filter(co2_array_2,
                                                      window_length=19,
                                                      polyorder=2)
 
@@ -166,27 +170,25 @@ class LunchboxLogger:
                     # measure_interval=2)
                     fs = 1 / self.measure_interval
 
-                    #cutoff = 0.01 # 1 cycle every 100 seconds
-                    cutoff = 0.02
-                    #cutoff = 0.05 # 1 cycle every 20 second
+                    # remove oscillations around 30 secs (0.033 hz)
+                    #co2_array_filter = butter_bandstop_filter(co2_array_smooth,
+                    #                                          lowcut=0.028,
+                    #                                          highcut=0.38,
+                    #                                          fs=fs,
+                    #                                          order=4)
 
-                    # remove oscillations around 0.03 Hz ~ 30 seconds
-                    co2_array_filter = butter_bandstop_filter(co2_array_smooth,
-                                                              lowcut=0.028,
-                                                              highcut=0.034,
-                                                              fs=fs,
-                                                              order=4)
-
-                    # remove oscillations around 0.015 Hz~ 60 seconds
-                    #co2_array_filter = butter_bandstop_filter(co2_array_filter,
+                    # remove oscillations around 60 secs
+                    #co2_array_filter2 = butter_bandstop_filter(co2_array_filter,
                     #                                          lowcut=0.012,
-                    #                                          highcut=0.018,
-                    #                                          fs=1.0)
+                    #                                          highcut=0.02,
+                    #                                          fs=1.0, order=4)
 
                     # remove high frequency noise
-                    co2_array_filter = butter_lowpass_filter(co2_array_filter,
+                    cutoff = 0.1
+                    #co2_array_filter = butter_lowpass_filter(co2_array_filter2,
+                    co2_array_filter = butter_lowpass_filter(co2_array_smooth,
                                                              cutoff, fs,
-                                                             order=4)
+                                                             order=5)
 
                 else:
                     co2_array_filter = co2_array
@@ -325,10 +327,15 @@ def butter_bandstop_filter(data, lowcut, highcut, fs, order=4):
     nyq = 0.5 * fs
     low = lowcut / nyq
     high = highcut / nyq
-    b, a = butter(order, [low, high], btype='bandstop', analog=False)
-    filtered_data = filtfilt(b, a, data)
+    b, a = butter(order, [low, high], btype='bandstop')
 
-    return filtered_data
+    padlen = 3 * max(len(a), len(b))
+    if len(data) <= padlen:
+        print(f"Skipping bandstop filter (order={order}) -")
+        print(f"input too short (len={len(data)} ≤ padlen={padlen})")
+        return data
+
+    return filtfilt(b, a, data)
 
 if __name__ == "__main__":
 
@@ -341,7 +348,7 @@ if __name__ == "__main__":
                         help='Initial leaf area in cm²')
     parser.add_argument('--window_size', type=int,
                         help='Number of samples in slope estimation window',
-                        default=31) # must be off for smoothing filter
+                        default=41) # must be off for smoothing filter
     parser.add_argument('--no_smoothing', action='store_true',
                         help='Turn off Savitzky-Golay and Butterworth \
                               smoothing filters')
@@ -369,7 +376,7 @@ if __name__ == "__main__":
     window_size = args.window_size
 
     logger = LunchboxLogger(port, baud, lunchbox_volume, temp, la, window_size,
-                            measure_interval=2, timeout=1.0,
+                            measure_interval=1, timeout=1.0,
                             smoothing=not args.no_smoothing,
                             rolling_regression=args.rolling_regression)
     logger.run()
