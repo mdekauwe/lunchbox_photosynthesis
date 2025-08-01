@@ -111,25 +111,33 @@ class LunchboxLogger:
         elapsed_s = current_time - self.start_time
         elapsed_min = elapsed_s / 60
 
-        if (current_time - self.last_measure_time) >= self.measure_interval:
+        #if (current_time - self.last_measure_time) >= self.measure_interval:
+        if (int(current_time - self.start_time) >
+            int(self.last_measure_time - self.start_time)):
+
             try:
                 co2 = self.sensor.read_co2()
 
                 if (self.last_co2 is not None and
                     abs(co2 - self.last_co2) < 0.01):
-                    print(f"CO2 unchanged ({co2} ppm) — assuming still valid.")
+                    co2 = self.last_co2  # don't update last_co2
                 else:
-                    self.last_co2 = co2
+                    self.last_co2 = co2 # good value
 
-                self.last_measure_time = current_time
-                self.co2_text.set_text(f"CO₂ = {co2:.0f} ppm")
+                self.co2_text.set_text(f"CO2 = {co2:.0f} ppm")
 
                 # Re-apply pressure compensation here every measurement
                 self.sensor.set_pressure_reference(self.pressure)
             except Exception as e:
                 print(f"Read error: {e}")
-                return self.line_anet, self.co2_text
+                if self.last_co2 is not None:
+                    # use last known co2
+                    co2 = self.last_co2
+                    #print(f"Using last known CO2: {co2} ppm")
+                else:
+                    return self.line_anet, self.co2_text
 
+            self.last_measure_time = current_time
             self.co2_window.append(co2)
             self.time_window.append(current_time)
 
