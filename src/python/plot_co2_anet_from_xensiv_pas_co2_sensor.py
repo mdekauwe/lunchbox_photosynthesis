@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
 import matplotlib
-matplotlib.use('Qt5Agg')  # or 'TkAgg' if Qt isn't available
+try:
+    matplotlib.use("Qt5Agg")  # Windows
+except ImportError:
+    matplotlib.use("MacOSX")  # mac
 import time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
