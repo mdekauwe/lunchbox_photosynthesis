@@ -135,7 +135,7 @@ if __name__ == "__main__":
     ax.set_ylim(-3, 0)
     ax.set_xlim(0, 100)
     ax.set_xlabel("Window number")
-    ax.set_ylabel("Mean Soil Respiration (μmol/m²/s)")
+    ax.set_ylabel("Mean Soil Respiration (μmol/m2/s)")
 
 
     ani = animation.FuncAnimation(
