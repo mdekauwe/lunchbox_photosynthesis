@@ -271,13 +271,16 @@ class LunchboxLogger:
 
                         if anet_range < 1.0:
                             mean_val = (anet_max + anet_min) / 2
-                            self.ax_anet.set_ylim(mean_val - 1, mean_val + 1)
+                            lower = max(-10, mean_val - 1)
+                            upper = mean_val + 1
                         else:
                             margin = anet_range * 0.1
-                            self.ax_anet.set_ylim(anet_min - margin,
-                                                  anet_max + margin)
+                            lower = max(-10, anet_min - margin)
+                            upper = anet_max + margin
+
+                        self.ax_anet.set_ylim(lower, upper)
                     else:
-                        self.ax_anet.set_ylim(-5, 8)
+                        self.ax_anet.set_ylim(-10, 8)
 
                 # Update plot with raw data
                 self.line_anet.set_data(self.xs, self.ys_anet)
