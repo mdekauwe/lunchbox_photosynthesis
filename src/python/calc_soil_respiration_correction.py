@@ -102,10 +102,10 @@ if __name__ == "__main__":
 
     port = find_usb_port()
     baud = 9600
-    measure_interval = 1    # seconds
+    measure_interval = 1
     window_size = 41
-    ignore_initial_min = 1  # minutes to ignore at start
-
+    ignore_initial_min = 0.5
+    
     pot_volume = calc_frustum_volume_litres(5.0, 3.4, 5.3)
     lunchbox_volume = 1.0 - pot_volume  # litres
 
@@ -132,11 +132,11 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots()
     line, = ax.plot([], [])
-    ax.set_ylim(-10, 0)
+    ax.set_ylim(-3, 0)
     ax.set_xlim(0, 100)
     ax.set_xlabel("Window number")
     ax.set_ylabel("Mean Soil Respiration (μmol/m²/s)")
-    
+
 
     ani = animation.FuncAnimation(
         fig, update_plot, interval=1000, cache_frame_data=False,
