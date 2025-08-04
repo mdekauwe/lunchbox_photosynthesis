@@ -10,9 +10,10 @@ from xensiv_pas_co2_sensor import CO2Sensor
 from serial_port_finder import find_usb_port
 
 def calc_soil_resp(delta_ppm_s, pressure_pa, volume_l, temp_k):
-    R = 8.314  # J mol^-1 K^-1
-    volume_m3 = volume_l / 1000.0  # litres to m^3
+    R = 8.314
+    volume_m3 = volume_l / 1000.0
     soil_resp = (delta_ppm_s * pressure_pa * volume_m3) / (R * temp_k)
+
     return soil_resp
 
 def slope_from_data(time_sec, co2_ppm, smoothing=False):
@@ -39,6 +40,7 @@ def slope_from_data(time_sec, co2_ppm, smoothing=False):
     model = sm.OLS(co2_filtered, X)
     results = model.fit()
     slope = results.params[1]
+
     return slope
 
 def calc_frustum_volume_litres(top_width_cm, base_width_cm, height_cm):
@@ -47,10 +49,27 @@ def calc_frustum_volume_litres(top_width_cm, base_width_cm, height_cm):
     h = height_cm
     volume_cm3 = (h / 3) * (a**2 + a*b + b**2)
     volume_litres = volume_cm3 / 1000
+
     return volume_litres
 
 def calc_top_area_m2_square(width_cm, length_cm):
+
     return (width_cm / 100.0) * (length_cm / 100.0)
+
+def print_final_stats(soil_resp_values, top_area_m2):
+    print("\nStopping measurements.")
+
+    negative_soil_resp = np.array([val for val in soil_resp_values if val < 0])
+
+    if len(negative_soil_resp) > 0:
+        mean = np.mean(negative_soil_resp)
+        std = np.std(negative_soil_resp)
+        filtered = negative_soil_resp[negative_soil_resp > (mean - 3*std)]
+        soil_resp_correction_umol_s = np.mean(filtered)
+        soil_resp_correction_umol_m2_s = soil_resp_correction_umol_s / top_area_m2
+        print(f"Estimated soil respiration correction : {soil_resp_correction_umol_m2_s:.4f} umol/m2/s")
+    else:
+        print("No negative soil respiration values found to estimate soil respiration.")
 
 def update_plot(frame, start_time, pressure_pa, lunchbox_volume, temp_k, top_area_m2,
                 measure_interval, ignore_initial_min, window_size,
@@ -83,7 +102,7 @@ def update_plot(frame, start_time, pressure_pa, lunchbox_volume, temp_k, top_are
     if running_avg:
         current_avg = running_avg[-1]
         if soil_resp_value_m2 is not None:
-            print(f"Elapsed {elapsed_min:.2f} min | Soil Resp: {soil_resp_value_m2:.4f} μmol/m2/s | Mean Soil Resp: {current_avg:.4f} μmol/m²/s")
+            print(f"Elapsed {elapsed_min:.2f} min | Soil Resp: {soil_resp_value_m2:.4f} μmol/m2/s | Mean Soil Resp: {current_avg:.4f} μmol/m2/s")
         else:
             print(f"Elapsed {elapsed_min:.2f} min | Soil Resp: --- | Mean Soil Resp: {current_avg:.4f} μmol/m²/s")
     else:
@@ -107,7 +126,7 @@ if __name__ == "__main__":
     ignore_initial_min = 0.5
 
     pot_volume = calc_frustum_volume_litres(5.0, 3.4, 5.3)
-    lunchbox_volume = 1.0 - pot_volume  # litres
+    lunchbox_volume = 1.0 - pot_volume
 
     top_area_m2 = calc_top_area_m2_square(5, 5)
 
@@ -137,7 +156,6 @@ if __name__ == "__main__":
     ax.set_xlabel("Window number")
     ax.set_ylabel("Mean Soil Respiration (μmol/m2/s)")
 
-
     ani = animation.FuncAnimation(
         fig, update_plot, interval=1000, cache_frame_data=False,
         fargs=(start_time, pressure_pa, lunchbox_volume, temp_k, top_area_m2,
@@ -145,24 +163,9 @@ if __name__ == "__main__":
                co2_window, time_window, soil_resp_values, running_avg, sensor,
                ax, line))
 
-    plt.show()
-
     try:
-        plt.pause(3600*24)
+        plt.show()
     except KeyboardInterrupt:
-        print("\nStopping measurements.")
-
-        negative_soil_resp = np.array([val for val in soil_resp_values if val < 0])
-
-        if len(negative_soil_resp) > 0:
-            mean = np.mean(negative_soil_resp)
-            std = np.std(negative_soil_resp)
-            filtered = negative_soil_resp[negative_soil_resp > (mean - 3*std)]
-            soil_resp_correction_umol_s = np.mean(filtered)
-            soil_resp_correction_umol_m2_s = soil_resp_correction_umol_s / top_area_m2
-            print(f"Estimated soil respiration correction : {soil_resp_correction_umol_m2_s:.4f} umol/m2/s")
-        else:
-            print("No negative soil respiration values found to estimate soil respiration.")
-
-    finally:
-            sensor.close()
+        print_final_stats(soil_resp_values, top_area_m2)
+        sensor.close()
+        print("\nMeasurement stopped by user.")
