@@ -70,9 +70,12 @@ class LunchboxLogger:
         self.last_measure_time = 0
 
     def run(self):
-        ani = animation.FuncAnimation(self.fig, self.update, blit=False,
-                                      interval=self.interval_ms,
-                                      cache_frame_data=False,)
+        #ani = animation.FuncAnimation(self.fig, self.update, blit=False,
+        #                              interval=self.interval_ms,
+        #                              cache_frame_data=False,)
+        self.ani = animation.FuncAnimation(self.fig, self.update, blit=False,
+                                   interval=self.interval_ms,
+                                   cache_frame_data=False)
         plt.tight_layout()
         plt.show()
         self.sensor.close()
