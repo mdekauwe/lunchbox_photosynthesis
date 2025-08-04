@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
-import matplotlib
-try:
-    matplotlib.use("Qt5Agg")  # Windows
-except ImportError:
-    matplotlib.use("MacOSX")  # mac
+import sys
+if sys.platform.startswith("win"):
+    try:
+        matplotlib.use("Qt5Agg")
+    except ImportError:
+        matplotlib.use("TkAgg")  # fallback on Windows if Qt isn't available
+
 import time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -135,9 +137,6 @@ class LunchboxLogger:
                     self.last_co2 = co2 # good value
 
                 #self.co2_text.set_text(f"CO2 = {co2:.0f} ppm")
-                self.co2_text.set_text(
-                    f"CO₂ = {co2:.0f} ppm | Aₙet = {anet_plot:+.2f} {label}")
-
 
                 # Re-apply pressure compensation here every measurement
                 #self.sensor.set_pressure_reference(self.pressure)
@@ -256,6 +255,10 @@ class LunchboxLogger:
                     anet_u = -anet_leaf_u
                     anet_l = -anet_leaf_l
                     label = "μmol box⁻¹ s⁻¹"
+
+                self.co2_text.set_text(
+                    f"CO₂ = {co2:.0f} ppm | A_neet = {anet_plot:+.2f} {label}")
+
 
                 print(f"Time: {elapsed_min:.2f} min | "
                       f"CO₂: {co2:.3f} ppm | "
