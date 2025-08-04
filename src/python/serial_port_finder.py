@@ -8,7 +8,6 @@ def find_usb_port():
         ports = list(serial.tools.list_ports.comports())
         for port in ports:
             if 'USB' in port.description:
-                #print(port.device)
                 return port.device
         raise RuntimeError("No USB COM port found on Windows")
     else:

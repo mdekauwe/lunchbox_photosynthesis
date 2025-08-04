@@ -87,7 +87,7 @@ class LunchboxLogger:
         units = "μmol m⁻² s⁻¹" if self.area_basis else "μmol box⁻¹ s⁻¹"
         self.ax_anet.set_ylabel(f"Net assimilation rate ({units})",
                                 color="black")
-        self.ax_anet.set_ylim(-5, 20)
+        self.ax_anet.set_ylim(-5, 10)
         self.ax_anet.tick_params(axis="y", labelcolor="black")
         self.ax_anet.set_xlim(0, self.plot_duration_min)
         self.ax_anet.axhline(y=0.0, color='darkgrey', linestyle='--')
@@ -131,7 +131,10 @@ class LunchboxLogger:
                 else:
                     self.last_co2 = co2 # good value
 
-                self.co2_text.set_text(f"CO2 = {co2:.0f} ppm")
+                #self.co2_text.set_text(f"CO2 = {co2:.0f} ppm")
+                self.co2_text.set_text(
+                    f"CO₂ = {co2:.0f} ppm | Aₙet = {anet_plot:+.2f} {label}")
+
 
                 # Re-apply pressure compensation here every measurement
                 #self.sensor.set_pressure_reference(self.pressure)
