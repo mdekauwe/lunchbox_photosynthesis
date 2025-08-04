@@ -26,7 +26,7 @@ class LunchboxLogger:
                  window_size, measure_interval=10, timeout=1.0,
                  plot_duration_min=10, smoothing=True,
                  rolling_regression=False, area_basis=True,
-                 soil_resp_correction=0.0):
+                 soil_resp_correction=0.0, auto_ylim=False):
 
         self.temp_k = temp_c + 273.15
         self.pressure = 101325.  # Pa
@@ -77,6 +77,7 @@ class LunchboxLogger:
                             color='#8e44ad')
         self.start_time = time.time()
         self.last_measure_time = 0
+        self.auto_ylim = auto_ylim
 
     def run(self):
         #ani = animation.FuncAnimation(self.fig, self.update, blit=False,
@@ -92,9 +93,9 @@ class LunchboxLogger:
     def _setup_axes(self):
         self.ax_anet.set_xlabel("Elapsed Time (min)")
         units = "μmol m⁻² s⁻¹" if self.area_basis else "μmol box⁻¹ s⁻¹"
-        self.ax_anet.set_ylabel(f"Net assimilation rate ({units})",
-                                color="black")
-        self.ax_anet.set_ylim(-5, 5)
+        self.ax_anet.set_ylabel(f"Net assimilation rate ({units})", color="black")
+        if not self.auto_ylim:
+            self.ax_anet.set_ylim(-5, 8)  # fixed y-axis range
         self.ax_anet.tick_params(axis="y", labelcolor="black")
         self.ax_anet.set_xlim(0, self.plot_duration_min)
         self.ax_anet.axhline(y=0.0, color='darkgrey', linestyle='--')
@@ -286,32 +287,32 @@ class LunchboxLogger:
                     max(0, elapsed_min - self.plot_duration_min),
                     elapsed_min)
 
-                if self.ys_anet_lower and self.ys_anet_upper:
-                    # Filter values based on visible x range
-                    x_min = max(0, elapsed_min - self.plot_duration_min)
+                if self.auto_ylim:
+                    if self.ys_anet_lower and self.ys_anet_upper:
+                        x_min = max(0, elapsed_min - self.plot_duration_min)
+                        visible_vals_l = [y for x, y in \
+                                zip(self.xs, self.ys_anet_lower) if x >= x_min]
+                        visible_vals_u = [y for x, y in \
+                                zip(self.xs, self.ys_anet_upper) if x >= x_min]
 
-                    visible_vals_l = [y for x, y in zip(self.xs, \
-                                            self.ys_anet_lower) if x >= x_min]
-                    visible_vals_u = [y for x, y in zip(self.xs, \
-                                            self.ys_anet_upper) if x >= x_min]
+                        if visible_vals_l and visible_vals_u:
+                            anet_min = min(visible_vals_l)
+                            anet_max = max(visible_vals_u)
+                            anet_range = anet_max - anet_min
 
-                    if visible_vals_l and visible_vals_u:
-                        anet_min = min(visible_vals_l)
-                        anet_max = max(visible_vals_u)
-                        anet_range = anet_max - anet_min
+                            if anet_range < 1.0:
+                                mean_val = (anet_max + anet_min) / 2
+                                lower = max(-10, mean_val - 1)
+                                upper = mean_val + 1
+                            else:
+                                margin = anet_range * 0.1
+                                lower = max(-10, anet_min - margin)
+                                upper = anet_max + margin
 
-                        if anet_range < 1.0:
-                            mean_val = (anet_max + anet_min) / 2
-                            lower = max(-10, mean_val - 1)
-                            upper = mean_val + 1
+                            self.ax_anet.set_ylim(lower, upper)
                         else:
-                            margin = anet_range * 0.1
-                            lower = max(-10, anet_min - margin)
-                            upper = anet_max + margin
+                            self.ax_anet.set_ylim(-5, 8)
 
-                        self.ax_anet.set_ylim(lower, upper)
-                    else:
-                        self.ax_anet.set_ylim(-10, 8)
 
                 # Update plot with raw data
                 self.line_anet.set_data(self.xs, self.ys_anet)
@@ -403,6 +404,8 @@ if __name__ == "__main__":
                         help='Use rolling linear regression (statsmodels)')
     parser.add_argument('--soil_resp_correction', type=float, default=0.0,
                         help='Add soil respiration correction flux if Anet < 0')
+    parser.add_argument('--auto_ylim', action='store_true',
+                        help='Automatically rescale y-axis?')
     args = parser.parse_args()
 
     if args.window_size % 2 == 0 or args.window_size < 5:
@@ -436,7 +439,8 @@ if __name__ == "__main__":
                             smoothing=not args.no_smoothing,
                             rolling_regression=args.rolling_regression,
                             area_basis=area_basis,
-                            soil_resp_correction=args.soil_resp_correction)
+                            soil_resp_correction=args.soil_resp_correction,
+                            auto_ylim=args.auto_ylim)
     logger.run()
 
 
