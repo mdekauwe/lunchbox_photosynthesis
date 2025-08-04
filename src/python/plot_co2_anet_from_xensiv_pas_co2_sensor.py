@@ -67,6 +67,7 @@ class LunchboxLogger:
 
         # Plot setup
         self.fig, self.ax_anet = plt.subplots(figsize=(12, 6))
+        self.auto_ylim = auto_ylim
         self._setup_axes()
 
         self.line_anet, = self.ax_anet.plot([], [], lw=2, color="#28b463", \
@@ -77,7 +78,7 @@ class LunchboxLogger:
                             color='#8e44ad')
         self.start_time = time.time()
         self.last_measure_time = 0
-        self.auto_ylim = auto_ylim
+
 
     def run(self):
         #ani = animation.FuncAnimation(self.fig, self.update, blit=False,
