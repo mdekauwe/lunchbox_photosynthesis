@@ -18,7 +18,7 @@ class LunchboxLogger:
     def __init__(self, port, baud, lunchbox_volume, temp_c, leaf_area_cm2,
                  window_size, measure_interval=10, timeout=1.0,
                  plot_duration_min=10, smoothing=True,
-                 rolling_regression=False):
+                 rolling_regression=False, area_basis=True):
 
         self.temp_k = temp_c + 273.15
         self.pressure = 101325.  # Pa
@@ -30,6 +30,7 @@ class LunchboxLogger:
         self.plot_duration_s = plot_duration_min * 60
         self.interval_ms = 1000#200#60
         self.max_len = int(self.plot_duration_s / (self.interval_ms / 1000))
+        self.area_basis = area_basis
 
         # Data buffers
         self.xs = deque(maxlen=self.max_len)
@@ -78,7 +79,8 @@ class LunchboxLogger:
 
     def _setup_axes(self):
         self.ax_anet.set_xlabel("Elapsed Time (min)")
-        self.ax_anet.set_ylabel("Net assimilation rate (μmol m⁻² s⁻¹)",
+        units = "μmol m⁻² s⁻¹" if self.area_basis else "μmol box⁻¹ s⁻¹"
+        self.ax_anet.set_ylabel(f"Net assimilation rate ({units})",
                                 color="black")
         self.ax_anet.set_ylim(-5, 20)
         self.ax_anet.tick_params(axis="y", labelcolor="black")
@@ -233,18 +235,25 @@ class LunchboxLogger:
                 anet_leaf_u = self.calc_anet(slope_upper)
                 anet_leaf_l = self.calc_anet(slope_lower)
 
-                anet_area = -anet_leaf / self.leaf_area_m2
-                anet_area_u = -anet_leaf_u / self.leaf_area_m2
-                anet_area_l = -anet_leaf_l / self.leaf_area_m2
+                if self.area_basis:
+                    anet_plot = -anet_leaf / self.leaf_area_m2
+                    anet_u = -anet_leaf_u / self.leaf_area_m2
+                    anet_l = -anet_leaf_l / self.leaf_area_m2
+                    label = "μmol m⁻² s⁻¹"
+                else:
+                    anet_plot = -anet_leaf
+                    anet_u = -anet_leaf_u
+                    anet_l = -anet_leaf_l
+                    label = "μmol box⁻¹ s⁻¹"
 
                 print(f"Time: {elapsed_min:.2f} min | "
                       f"CO₂: {co2:.3f} ppm | "
-                      f"A_net: {anet_area:+.2f} μmol m⁻² s⁻¹")
+                      f"A_net: {anet_plot:+.2f} {label}")
 
                 self.xs.append(elapsed_min)
-                self.ys_anet.append(anet_area)
-                self.ys_anet_lower.append(anet_area_l)
-                self.ys_anet_upper.append(anet_area_u)
+                self.ys_anet.append(anet_plot)
+                self.ys_anet_lower.append(anet_u)
+                self.ys_anet_upper.append(anet_l)
 
                 # Smooth Anet data for plotting
                 #anet_series = pd.Series(self.ys_anet)
@@ -374,14 +383,21 @@ if __name__ == "__main__":
         pot_volume = calc_volume_litres(5, 10, 5)
         lunchbox_volume = 1.0 - pot_volume  # litres
 
-    la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 25.0
+    if args.no_plant_pot:
+        area_basis = False
+        la = 1.0  # dummy value
+    else:
+        area_basis = True
+        la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 25.0
+
     temp = args.temp
     window_size = args.window_size
 
     logger = LunchboxLogger(port, baud, lunchbox_volume, temp, la, window_size,
                             measure_interval=1, timeout=1.0,
                             smoothing=not args.no_smoothing,
-                            rolling_regression=args.rolling_regression)
+                            rolling_regression=args.rolling_regression,
+                            area_basis=area_basis)
     logger.run()
 
 
