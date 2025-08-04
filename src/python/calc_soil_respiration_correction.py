@@ -52,12 +52,35 @@ def calc_frustum_volume_litres(top_width_cm, base_width_cm, height_cm):
 def calc_top_area_m2_square(width_cm, length_cm):
     return (width_cm / 100.0) * (length_cm / 100.0)
 
+def print_final_stats(soil_resp_values, top_area_m2):
+    print("\nStopping measurements.")
+
+    negative_soil_resp = np.array([val for val in soil_resp_values if val < 0])
+
+    if len(negative_soil_resp) > 0:
+        mean = np.mean(negative_soil_resp)
+        std = np.std(negative_soil_resp)
+        filtered = negative_soil_resp[negative_soil_resp > (mean - 3*std)]
+        soil_resp_correction_umol_s = np.mean(filtered)
+        soil_resp_correction_umol_m2_s = soil_resp_correction_umol_s / top_area_m2
+        print(f"Estimated soil respiration correction : {soil_resp_correction_umol_m2_s:.4f} umol/m2/s")
+    else:
+        print("No negative soil respiration values found to estimate soil respiration.")
+
 def update_plot(frame, start_time, pressure_pa, lunchbox_volume, temp_k, top_area_m2,
                 measure_interval, ignore_initial_min, window_size,
                 co2_window, time_window, soil_resp_values, running_avg, sensor,
-                ax, line):
+                ax, line, ani=None):
+
     current_time = time.time()
     elapsed_min = (current_time - start_time) / 60.0
+
+    if elapsed_min > 7:
+        if ani is not None:
+            ani.event_source.stop()  # stop the animation loop
+        print_final_stats(soil_resp_values, top_area_m2)
+        sensor.close()
+        return line,
 
     co2 = sensor.read_co2()
     co2_window.append(co2)
@@ -83,9 +106,9 @@ def update_plot(frame, start_time, pressure_pa, lunchbox_volume, temp_k, top_are
     if running_avg:
         current_avg = running_avg[-1]
         if soil_resp_value_m2 is not None:
-            print(f"Elapsed {elapsed_min:.2f} min | Soil Resp: {soil_resp_value_m2:.4f} μmol/m2/s | Mean Soil Resp: {current_avg:.4f} μmol/m²/s")
+            print(f"Elapsed {elapsed_min:.2f} min | Soil Resp: {soil_resp_value_m2:.4f} μmol/m2/s | Mean Soil Resp: {current_avg:.4f} μmol/m2/s")
         else:
-            print(f"Elapsed {elapsed_min:.2f} min | Soil Resp: --- | Mean Soil Resp: {current_avg:.4f} μmol/m²/s")
+            print(f"Elapsed {elapsed_min:.2f} min | Soil Resp: --- | Mean Soil Resp: {current_avg:.4f} μmol/m2/s")
     else:
         if soil_resp_value_m2 is not None:
             print(f"Elapsed {elapsed_min:.2f} min | Soil Resp: {soil_resp_value_m2:.4f} μmol/m2/s | Mean Soil Resp: ---")
@@ -137,32 +160,16 @@ if __name__ == "__main__":
     ax.set_xlabel("Window number")
     ax.set_ylabel("Mean Soil Respiration (μmol/m2/s)")
 
-
+    # Create animation, passing 'ani' so we can stop it inside update_plot
     ani = animation.FuncAnimation(
         fig, update_plot, interval=1000, cache_frame_data=False,
         fargs=(start_time, pressure_pa, lunchbox_volume, temp_k, top_area_m2,
                measure_interval, ignore_initial_min, window_size,
                co2_window, time_window, soil_resp_values, running_avg, sensor,
-               ax, line))
+               ax, line, None))
+
+    # Hack to pass the ani object to update_plot (adds to fargs)
+    # (Because FuncAnimation does not have a direct way to pass itself)
+    ani._funcargs = ani._funcargs[:-1] + (ani,)
 
     plt.show()
-
-    try:
-        plt.pause(3600*24)
-    except KeyboardInterrupt:
-        print("\nStopping measurements.")
-
-        negative_soil_resp = np.array([val for val in soil_resp_values if val < 0])
-
-        if len(negative_soil_resp) > 0:
-            mean = np.mean(negative_soil_resp)
-            std = np.std(negative_soil_resp)
-            filtered = negative_soil_resp[negative_soil_resp > (mean - 3*std)]
-            soil_resp_correction_umol_s = np.mean(filtered)
-            soil_resp_correction_umol_m2_s = soil_resp_correction_umol_s / top_area_m2
-            print(f"Estimated soil respiration correction : {soil_resp_correction_umol_m2_s:.4f} umol/m2/s")
-        else:
-            print("No negative soil respiration values found to estimate soil respiration.")
-
-    finally:
-            sensor.close()
