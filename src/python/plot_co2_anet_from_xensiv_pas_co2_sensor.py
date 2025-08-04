@@ -339,6 +339,19 @@ def calc_volume_litres(width_cm, height_cm, length_cm):
 
     return volume_litres
 
+def calc_frustum_volume_litres(top_width_cm, base_width_cm, height_cm):
+    """
+    Calculate the volume in litres a pot with slopping sides
+    """
+    a = top_width_cm
+    b = base_width_cm
+    h = height_cm
+
+    volume_cm3 = (h / 3) * (a**2 + a*b + b**2)
+    volume_litres = volume_cm3 / 1000
+
+    return volume_litres
+
 def butter_lowpass_filter(data, cutoff, fs, order=4):
     # suppress high-frequency sensor noise but keep long-period oscillations
     nyq = 0.5 * fs
@@ -394,7 +407,8 @@ if __name__ == "__main__":
     if args.no_plant_pot:
         lunchbox_volume = 1.0  # litres
     else:
-        pot_volume = calc_volume_litres(5, 10, 5)
+        #pot_volume = calc_volume_litres(5, 5.3, 5)
+        pot_volume = calc_frustum_volume_litres(5.0, 3.4, 5.3)
         lunchbox_volume = 1.0 - pot_volume  # litres
 
     if args.no_plant_pot:
