@@ -25,7 +25,8 @@ class LunchboxLogger:
     def __init__(self, port, baud, lunchbox_volume, temp_c, leaf_area_cm2,
                  window_size, measure_interval=10, timeout=1.0,
                  plot_duration_min=10, smoothing=True,
-                 rolling_regression=False, area_basis=True):
+                 rolling_regression=False, area_basis=True,
+                 soil_resp_correction=0.0):
 
         self.temp_k = temp_c + 273.15
         self.pressure = 101325.  # Pa
@@ -38,6 +39,7 @@ class LunchboxLogger:
         self.interval_ms = 1000#200#60
         self.max_len = int(self.plot_duration_s / (self.interval_ms / 1000))
         self.area_basis = area_basis
+        self.soil_resp_correction = soil_resp_correction
 
         # Data buffers
         self.xs = deque(maxlen=self.max_len)
@@ -256,6 +258,12 @@ class LunchboxLogger:
                     anet_l = -anet_leaf_l
                     label = "μmol box⁻¹ s⁻¹"
 
+                # Apply respiration correction if Anet < 0
+                if anet_plot < 0:
+                    anet_plot += self.soil_resp_correction
+                    anet_u += self.soil_resp_correction
+                    anet_l += self.soil_resp_correction
+
                 self.co2_text.set_text(
                     f"CO₂ = {co2:.0f} ppm | A_net = {anet_plot:+.2f} {label}")
 
@@ -393,6 +401,8 @@ if __name__ == "__main__":
                               smoothing filters')
     parser.add_argument('--rolling_regression', action='store_true',
                         help='Use rolling linear regression (statsmodels)')
+    parser.add_argument('--soil_resp_correction', type=float, default=0.0,
+                        help='Add soil respiration correction flux if Anet < 0')
     args = parser.parse_args()
 
     if args.window_size % 2 == 0 or args.window_size < 5:
@@ -425,7 +435,8 @@ if __name__ == "__main__":
                             measure_interval=1, timeout=1.0,
                             smoothing=not args.no_smoothing,
                             rolling_regression=args.rolling_regression,
-                            area_basis=area_basis)
+                            area_basis=area_basis,
+                            soil_resp_correction=args.soil_resp_correction)
     logger.run()
 
 
