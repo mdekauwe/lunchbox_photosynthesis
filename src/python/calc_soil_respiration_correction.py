@@ -105,7 +105,7 @@ if __name__ == "__main__":
     measure_interval = 1
     window_size = 41
     ignore_initial_min = 0.5
-    
+
     pot_volume = calc_frustum_volume_litres(5.0, 3.4, 5.3)
     lunchbox_volume = 1.0 - pot_volume  # litres
 
@@ -152,13 +152,17 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nStopping measurements.")
 
-        negative_soil_resp = [val for val in soil_resp_values if val < 0]
-        if negative_soil_resp:
-            soil_resp_correction_umol_s = np.mean(negative_soil_resp)
+        negative_soil_resp = np.array([val for val in soil_resp_values if val < 0])
+
+        if len(negative_soil_resp) > 0:
+            mean = np.mean(negative_soil_resp)
+            std = np.std(negative_soil_resp)
+            filtered = negative_soil_resp[negative_soil_resp > (mean - 3*std)]
+            soil_resp_correction_umol_s = np.mean(filtered)
             soil_resp_correction_umol_m2_s = soil_resp_correction_umol_s / top_area_m2
-            print(f"Estimated soil respiration correction (mean negative soil respiration): {soil_resp_correction_umol_m2_s:.4f} μmol/m²/s")
+            print(f"Estimated soil respiration correction : {soil_resp_correction_umol_m2_s:.4f} umol/m2/s")
         else:
             print("No negative soil respiration values found to estimate soil respiration.")
 
     finally:
-        sensor.close()
+            sensor.close()
