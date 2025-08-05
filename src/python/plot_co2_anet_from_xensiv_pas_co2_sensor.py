@@ -11,7 +11,6 @@ import time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from collections import deque
-import argparse
 import numpy as np
 import serial
 from scipy.signal import savgol_filter, butter, filtfilt, medfilt
@@ -386,7 +385,44 @@ def butter_bandstop_filter(data, lowcut, highcut, fs, order=4):
 
     return filtfilt(b, a, data)
 
+def start_logger(temp=20.0, no_plant_pot=False, leaf_area=25.0, window_size=41,
+                 smoothing=True, rolling_regression=False,
+                 soil_resp_correction=0.0, auto_ylim=False):
+
+    if window_size % 2 == 0 or window_size < 5:
+        raise ValueError("window_size must be an odd integer ≥ 5")
+
+    # ls /dev/tty.*
+    #port = "/dev/tty.usbmodem1101" # home computer
+    #port = "/dev/tty.usbmodem1101"   # work computer
+    port = find_usb_port()
+    baud = 9600
+
+    if no_plant_pot:
+        lunchbox_volume = 1.0
+        area_basis = False
+        la = 1.0
+    else:
+        pot_volume = calc_frustum_volume_litres(5.0, 3.4, 5.3)
+        lunchbox_volume = 1.0 - pot_volume
+        area_basis = True
+        la = leaf_area if leaf_area > 0 else 25.0
+
+    logger = LunchboxLogger(port=port, baud=baud,
+                            lunchbox_volume=lunchbox_volume, temp_c=temp,
+                            leaf_area_cm2=la, window_size=window_size,
+                            measure_interval=1, timeout=1.0,
+                            smoothing=smoothing,
+                            rolling_regression=rolling_regression,
+                            area_basis=area_basis,
+                            soil_resp_correction=soil_resp_correction,
+                            auto_ylim=auto_ylim)
+
+    logger.run()
+
 if __name__ == "__main__":
+
+    import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--temp', type=float, help='Temperature in deg C',
@@ -412,37 +448,11 @@ if __name__ == "__main__":
     if args.window_size % 2 == 0 or args.window_size < 5:
         raise ValueError("window_size must be an odd integer ≥ 5")
 
-    # ls /dev/tty.*
-    #port = "/dev/tty.usbmodem1101" # home computer
-    #port = "/dev/tty.usbmodem1101"   # work computer
-    port = find_usb_port()
-    baud = 9600
+    start_logger(temp=args.temp, no_plant_pot=args.no_plant_pot,
+                 leaf_area=args.leaf_area, window_size=args.window_size,
+                 smoothing=not args.no_smoothing,
+                 rolling_regression=args.rolling_regression,
+                 soil_resp_correction=args.soil_resp_correction,
+                 auto_ylim=args.auto_ylim)
 
-    if args.no_plant_pot:
-        lunchbox_volume = 1.0  # litres
-    else:
-        #pot_volume = calc_volume_litres(5, 5.3, 5)
-        pot_volume = calc_frustum_volume_litres(5.0, 3.4, 5.3)
-        lunchbox_volume = 1.0 - pot_volume  # litres
-
-    if args.no_plant_pot:
-        area_basis = False
-        la = 1.0  # dummy value
-    else:
-        area_basis = True
-        la = args.leaf_area if args.leaf_area and args.leaf_area > 0 else 25.0
-
-    temp = args.temp
-    window_size = args.window_size
-
-    logger = LunchboxLogger(port, baud, lunchbox_volume, temp, la, window_size,
-                            measure_interval=1, timeout=1.0,
-                            smoothing=not args.no_smoothing,
-                            rolling_regression=args.rolling_regression,
-                            area_basis=area_basis,
-                            soil_resp_correction=args.soil_resp_correction,
-                            auto_ylim=args.auto_ylim)
-    logger.run()
-
-
-    # Does making measure_interval=3 to 5 reduce noise?
+    
