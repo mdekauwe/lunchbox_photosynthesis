@@ -429,7 +429,7 @@ if __name__ == "__main__":
                          default=20.)
     parser.add_argument('--no_plant_pot', action='store_true',
                         help='Turn off volume correction for plant in pot')
-    parser.add_argument('--leaf_area', type=float,
+    parser.add_argument('--leaf_area', type=float, default=25,
                         help='Initial leaf area in cm²')
     parser.add_argument('--window_size', type=int,
                         help='Number of samples in slope estimation window',
@@ -454,5 +454,3 @@ if __name__ == "__main__":
                  rolling_regression=args.rolling_regression,
                  soil_resp_correction=args.soil_resp_correction,
                  auto_ylim=args.auto_ylim)
-
-    
