@@ -398,6 +398,7 @@ def start_logger(temp=20.0, no_plant_pot=False, leaf_area=25.0, window_size=41,
     port = find_usb_port()
     baud = 9600
 
+    # Setup volume and area basis
     if no_plant_pot:
         lunchbox_volume = 1.0
         area_basis = False
