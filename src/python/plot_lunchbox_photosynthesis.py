@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import matplotlib
 if sys.platform.startswith("win"):
     try:
         matplotlib.use("Qt5Agg")
