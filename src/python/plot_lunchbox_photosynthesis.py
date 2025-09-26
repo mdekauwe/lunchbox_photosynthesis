@@ -24,12 +24,19 @@ def run_plotter(temp=20.0, no_plant_pot=False, leaf_area=25.0, window_size=41,
 
     # Setup volume and area basis
     if no_plant_pot:
-        lunchbox_volume = 1.0
+        #lunchbox_volume = 1.0
+
+        #volume_cm3 = 12 * 8 * 3 # cm
+        #volume_litres = volume_cm3 / 1000
+        lunchbox_volume = 0.288 # l
         area_basis = False
         la = 1.0
     else:
         pot_volume = calc_frustum_volume_litres(5.0, 3.4, 5.3)
-        lunchbox_volume = 1.0 - pot_volume
+        #lunchbox_volume = 1.0 - pot_volume # 1 l
+        #volume_cm3 = 12 * 8 * 3 # cm
+        #volume_litres = volume_cm3 / 1000
+        lunchbox_volume = 0.288 # l
         area_basis = True
         la = leaf_area if leaf_area > 0 else 25.0
 
