@@ -31,7 +31,7 @@ def run_plotter(temp=20.0, no_plant_pot=False, leaf_area=25.0, window_size=41,
     else:
         pot_volume = calc_frustum_volume_litres(5.0, 3.4, 5.3)
         #lunchbox_volume = 1.0 - pot_volume # 1 l
-        lunchbox_volume = 0.5  # l
+        lunchbox_volume = 0.5 - pot_volume # l
         area_basis = True
         la = leaf_area if leaf_area > 0 else 25.0
 
@@ -158,7 +158,7 @@ if __name__ == "__main__":
                         help='Initial leaf area in cm²')
     parser.add_argument('--window_size', type=int,
                         help='Number of samples in slope estimation window',
-                        default=41) # must be off for smoothing filter
+                        default=31) # must be off for smoothing filter
     parser.add_argument('--no_smoothing', action='store_true',
                         help='Turn off Savitzky-Golay and Butterworth \
                               smoothing filters')
