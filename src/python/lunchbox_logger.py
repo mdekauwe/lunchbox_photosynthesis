@@ -75,7 +75,8 @@ class LunchboxLogger:
         try:
             co2 = self.sensor.read_co2()
 
-            if self.last_co2 is not None and abs(co2 - self.last_co2) < 0.01:
+            #if self.last_co2 is not None and abs(co2 - self.last_co2) < 0.01:
+            if self.last_co2 is not None and abs(co2 - self.last_co2) < 0.1:
                 co2 = self.last_co2  # avoid noisy updates, i.e. don't update
             else:
                 self.last_co2 = co2
