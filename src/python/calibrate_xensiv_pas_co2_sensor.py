@@ -1,90 +1,91 @@
 #!/usr/bin/env python
 
-import serial
-import serial.tools.list_ports
-import glob
+"""
+Forced calibration of the XENSIV PAS CO2 sensor.
+
+Tells the sensor "the air you are in now is --ref ppm" and shifts its offset
+to match. It does not need fresh air: indoors, use a value from a reference
+sensor if you have one, or just pick a nominal value (e.g. 420) and treat the
+readings as relative. Keep the box open, don't breathe on it, and let it sit
+for a few minutes so the reading is steady.
+
+The offset is saved in the sensor's non-volatile memory, so it survives power
+cycles (use --reset to go back to factory). It only changes the absolute ppm;
+A_net depends on the rate of change so is unaffected either way.
+"""
+
 import sys
 import time
 from serial_port_finder import find_usb_port
+from xensiv_pas_co2_sensor import CO2Sensor
 
-class PASCO2Calibrator:
-    def __init__(self, port, baud=9600, timeout=1.5):
-        self.ser = serial.Serial(port, baudrate=baud, timeout=timeout)
-        self.ser.reset_input_buffer()
-        self.ser.reset_output_buffer()
 
-    def close(self):
-        if self.ser.is_open:
-            self.ser.close()
+def show_readings(sensor, n, label):
+    sensor.arm_sensor(rate_seconds=5)
+    readings = [sensor.wait_for_co2(timeout_s=15) for _ in range(n)]
+    print(f"{label}: {readings} ppm")
+    return readings
 
-    def send_command(self, cmd):
-        self.ser.write(cmd.encode("ascii"))
-        self.ser.flush()
-        time.sleep(0.05)
 
-    def read_response(self):
-        resp = self.ser.readline().strip()
-        return resp.decode("ascii") if resp else None
-
-    def write_register(self, reg, data):
-        cmd = f"W,{reg},{data}\n"
-        self.send_command(cmd)
-        resp = self.read_response()
-        if resp not in ("OK", "\x06"):
-            print(f"Write {reg}={data} got unexpected resp: {resp}")
-
-    def read_register(self, reg):
-        cmd = f"R,{reg}\n"
-        self.send_command(cmd)
-        return self.read_response()
-
-    def calibrate_to_outside_air_ppm(self):
-        print("Setting calibration reference to 400 ppm...")
-        ref_val = 420
-        msb = (ref_val >> 8) & 0xFF
-        lsb = ref_val & 0xFF
-        # 0x0D = CALIB_REF_H, 0x0E = CALIB_REF_L
-        self.write_register("0D", f"{msb:02X}")
-        self.write_register("0E", f"{lsb:02X}")
-
-        print("Triggering Forced Compensation Scheme (FCS)...")
-        # Read current MEAS_CFG (0x04)
-        self.send_command("R,04\n")
-        resp = self.read_response()
-        cfg = int(resp, 16)
-
-        # Set BOC_CFG bits [3:2] = 10b (forced compensation)
-        new_cfg = (cfg & ~0b1100) | (0b10 << 2)
-        self.write_register("04", f"{new_cfg:02X}")
-
-        print("FCS started. Keep sensor in outdoor air (~420 ppm).")
-        print("Waiting for 10 measurement cycles (~100 s)...")
-
-        for i in range(10, 0, -1):
-            print(f"  {i*10} s remaining...")
-            time.sleep(10)
-
-        print("FCS completed. Sensor should now be calibrated to ~420 ppm.")
-
-        # Disable ABOC: set BOC_CFG bits [3:2] = 00b
-        cfg_disabled = (cfg & ~0b1100) | (0b00 << 2)
-        self.write_register("04", f"{cfg_disabled:02X}")
-
-        print("Calibration finished and ABOC disabled. Sensor will hold this offset.")
-
-def main():
+def main(ref_ppm, save, reset):
     try:
         port = find_usb_port()
     except RuntimeError as e:
         print(f"Error: {e}")
         sys.exit(1)
 
-    sensor = PASCO2Calibrator(port)
+    sensor = CO2Sensor(port)
     try:
-        sensor.calibrate_to_outside_air_ppm()
+        sensor.reset_sensor()
+
+        if reset:
+            sensor.reset_forced_calibration()
+            print("Saved calibration offset cleared (factory calibration).")
+            show_readings(sensor, 3, "Now reading")
+            return
+
+        before = show_readings(sensor, 6, "Before calibration")
+        spread = max(before[2:]) - min(before[2:])  # first readings settle
+        if spread > 30:
+            print(f"Warning: readings vary by {spread} ppm, the air isn't "
+                  "steady so the offset will be off by roughly that much.")
+
+        print(f"Calibrating to {ref_ppm} ppm, leave the sensor where it is "
+              "(takes ~30-60 s)...")
+        sensor.forced_calibration(
+            ref_ppm, save=save,
+            progress=lambda t: print(f"\r  {t:3.0f} s", end="", flush=True))
+        print("\r  done.")
+
+        # The new offset feeds in over a few readings, which swing wildly
+        # (even below zero), so discard those before showing the result
+        print("Settling...")
+        sensor.arm_sensor(rate_seconds=5)
+        for _ in range(5):
+            sensor.wait_for_co2(timeout_s=15)
+        show_readings(sensor, 4, "After calibration")
+        print("Saved to sensor memory." if save else
+              "Not saved: offset is lost on reset/power off.")
     finally:
+        try:
+            sensor.set_idle()
+        except Exception:
+            pass
         sensor.close()
+
 
 if __name__ == "__main__":
 
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Forced calibration")
+    parser.add_argument("--ref", type=int, default=420,
+                        help="CO2 to assign to the air the sensor is in now "
+                             "(ppm, 350-1500)")
+    parser.add_argument("--no_save", action="store_true",
+                        help="Don't store the offset (test only)")
+    parser.add_argument("--reset", action="store_true",
+                        help="Clear the saved offset back to factory")
+    args = parser.parse_args()
+
+    main(args.ref, save=not args.no_save, reset=args.reset)

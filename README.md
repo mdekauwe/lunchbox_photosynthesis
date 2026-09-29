@@ -8,6 +8,17 @@ Code for sandwich box photosynthesis logger.
   <img src="img/plot.JPG" width="450" />
 </p>
 
+## Usage (Xensiv PAS CO2 sensor)
+
+From `src/python`:
+
+- `python plot_lunchbox_photosynthesis.py --leaf_area 25` live CO₂ and A_net plot (`--save` to log a CSV, `--no_plant_pot` for an empty box).
+- `python calc_soil_respiration_correction.py` with just the pot and soil in the closed box; pass the printed value to `--soil_resp_correction`.
+- `python calibrate_xensiv_pas_co2_sensor.py --ref 420` sets the current air to the given ppm (works indoors, the value can be nominal; only the absolute ppm changes, not A_net). `--reset` restores the factory calibration.
+- `python reset_sensor.py` soft resets the sensor.
+
+The sensor measures every 5 s at most (its hardware minimum); A_net is a robust linear fit over the last 24 readings (2 min).
+
 ## Notes
 
 - Box screens about ~15% of PAR (testing with licor PAR sensor).

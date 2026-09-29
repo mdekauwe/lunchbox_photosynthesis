@@ -1,47 +1,74 @@
+import csv
 import time
+import datetime
 from collections import deque
 import numpy as np
 import statsmodels.api as sm
-from scipy.signal import savgol_filter, butter, filtfilt, medfilt
 
-from xensiv_pas_co2_sensor import CO2Sensor
-from serial_port_finder import find_usb_port
+from xensiv_pas_co2_sensor import CO2Sensor, MEAS_RATE_MIN_S
+
+# Box and pot geometry
+BOX_VOLUME_L = 0.5
+POT_TOP_CM = 5.0     # square pot, top edge
+POT_BASE_CM = 3.4    # square pot, base edge
+POT_HEIGHT_CM = 5.3
+PRESSURE_PA = 101325.0
+RGAS = 8.314  # J K-1 mol-1
+
 
 class LunchboxLogger:
     def __init__(self, port, baud, lunchbox_volume, temp_c, leaf_area_cm2,
-                 window_size, measure_interval=10, timeout=1.0, smoothing=True,
-                 rolling_regression=False, area_basis=True,
-                 soil_resp_correction=0.0,):
+                 window_size, measure_interval=MEAS_RATE_MIN_S, timeout=1.0,
+                 robust=True, area_basis=True, soil_resp_correction=0.0,
+                 soil_area_m2=None, pressure_pa=PRESSURE_PA, csv_path=None,
+                 warmup_readings=4):
+
+        if window_size < 5:
+            raise ValueError("window_size must be ≥ 5 samples")
+        if soil_resp_correction < 0:
+            raise ValueError("soil_resp_correction is the soil CO2 efflux and "
+                             "must be ≥ 0 (μmol m⁻² soil s⁻¹)")
 
         self.temp_k = temp_c + 273.15
-        self.pressure = 101325.0  # Pa
+        self.pressure = pressure_pa
         self.leaf_area_m2 = leaf_area_cm2 / 10000.0
         self.lunchbox_volume = lunchbox_volume
         self.window_size = window_size
         self.measure_interval = measure_interval
         self.area_basis = area_basis
-        self.soil_resp_correction = soil_resp_correction
-        self.smoothing = smoothing
-        self.rolling_regression = rolling_regression
+        self.robust = robust
+        # The first few readings after a reset jump around, drop them
+        self.warmup_readings = warmup_readings
+
+        # Soil efflux adds CO2 to the box all the time, so what we measure is
+        # leaf uptake minus soil efflux. Convert the per-soil-area correction
+        # to a whole-box flux (μmol s-1) and add it back on every reading.
+        if soil_area_m2 is None:
+            soil_area_m2 = (POT_TOP_CM / 100.0) ** 2
+        self.soil_flux_umol_s = soil_resp_correction * soil_area_m2
 
         # Data buffers
         self.co2_window = deque(maxlen=window_size)
         self.time_window = deque(maxlen=window_size)
-        self.last_co2 = None
+
+        self.csv_file = None
+        if csv_path:
+            self.csv_file = open(csv_path, "w", newline="")
+            self.csv_writer = csv.writer(self.csv_file)
+            self.csv_writer.writerow(["time", "elapsed_s", "co2_ppm", "anet",
+                                      "anet_lower", "anet_upper"])
 
         # Setup sensor
         self.sensor = CO2Sensor(port, baud, timeout)
         try:
             self.sensor.reset_sensor()
-            self.sensor.set_pressure_reference(101325) # default was 900 hpa
-            time.sleep(2)
+            self.sensor.set_pressure_reference(self.pressure)
             self.sensor.arm_sensor(rate_seconds=self.measure_interval)
         except Exception as e:
             print(f"Failed to arm sensor: {e}")
             self.sensor.close()
             raise
 
-        self.last_measure_time = 0
         self.start_time = time.time()
 
     def calc_anet(self, delta_ppm_s):
@@ -59,146 +86,92 @@ class LunchboxLogger:
         #   V         = lunchbox_volume (m3)
         #   R         = universal gas constant (J mol⁻¹ K⁻¹)
         #   T         = temperature (K)
-        rgas = 8.314  # J K-1 mol-1
         volume_m3 = self.lunchbox_volume / 1000.0  # litre to m3
-        an = (delta_ppm_s * self.pressure * volume_m3) / (rgas * self.temp_k)
+        an = (delta_ppm_s * self.pressure * volume_m3) / (RGAS * self.temp_k)
 
         return an # umol leaf s-1
 
     def read_and_update(self):
-        current_time = time.time()
-
-        if current_time - self.last_measure_time < self.measure_interval:
-            # Not time to measure
+        """
+        Poll the sensor. Returns None if there is no new reading yet,
+        otherwise a dict; "anet" is None until the window has filled.
+        """
+        try:
+            if not self.sensor.is_data_ready():
+                return None
+            co2 = self.sensor.read_co2()
+        except Exception as e:
+            # Skip the sample rather than inventing one, a repeated value
+            # would drag the slope towards zero
+            print(f"Read error: {e}")
             return None
 
-        try:
-            co2 = self.sensor.read_co2()
+        if self.warmup_readings > 0:
+            self.warmup_readings -= 1
+            return None
 
-            #if self.last_co2 is not None and abs(co2 - self.last_co2) < 0.01:
-            if self.last_co2 is not None and abs(co2 - self.last_co2) < 0.1:
-                co2 = self.last_co2  # avoid noisy updates, i.e. don't update
-            else:
-                self.last_co2 = co2
-
-            # Re-apply pressure compensation here every measurement
-            #self.sensor.set_pressure_reference(self.pressure)
-
-        except Exception as e:
-            print(f"Read error: {e}")
-            if self.last_co2 is not None:
-                co2 = self.last_co2
-            else:
-                return None
-
-        self.last_measure_time = current_time
+        current_time = time.time()
         self.co2_window.append(co2)
         self.time_window.append(current_time)
 
-        if len(self.co2_window) < self.window_size:
-            return None
-
-        co2_array = np.array(self.co2_window)
-        time_array = np.array(self.time_window)
-        elapsed = time_array - time_array[0]
-        elapsed = np.round(elapsed, 2)
-        elapsed -= elapsed.mean()
-
-        if self.smoothing and len(co2_array) >= self.window_size:
-            co2_array_2 = medfilt(co2_array, kernel_size=5)
-            co2_array_smooth = savgol_filter(co2_array_2, window_length=19,
-                                             polyorder=2)
-            # sampling frequency in Hz (e.g., 0.5 Hz if
-            fs = 1 / self.measure_interval
-            # remove high frequency noise
-            cutoff = 0.1
-            co2_array_filter = butter_lowpass_filter(co2_array_smooth, cutoff,
-                                                     fs, order=5)
-        else:
-            co2_array_filter = co2_array
-
-        # Rolling linear regression
-        if self.rolling_regression:
-            X = sm.add_constant(elapsed)
-            #model = sm.OLS(co2_array_filter, X)
-
-            # less sensitive to outliers
-            model = sm.RLM(co2_array_filter, X, M=sm.robust.norms.HuberT())
-            results = model.fit()
-            slope = results.params[1]
-            stderr = results.bse[1] if results.bse.size > 1 else 0
-        else:
-            (p, residuals, _, _, _) = np.polyfit(elapsed, co2_array_filter, 1,
-                                                 full=True)
-            slope = p[0]
-            n = len(elapsed)
-            if n > 2 and residuals.size > 0:
-                residual_var = residuals[0] / (n - 2)
-                x_var = np.var(elapsed, ddof=1)
-                stderr = np.sqrt(residual_var / (n * x_var))
-            else:
-                stderr = 0
-
-        slope_upper = slope + 1.96 * stderr
-        slope_lower = slope - 1.96 * stderr
-
-        anet_leaf = self.calc_anet(slope)
-        anet_leaf_u = self.calc_anet(slope_upper)
-        anet_leaf_l = self.calc_anet(slope_lower)
-
-        if self.area_basis:
-            anet_plot = -anet_leaf / self.leaf_area_m2
-            anet_u = -anet_leaf_u / self.leaf_area_m2
-            anet_l = -anet_leaf_l / self.leaf_area_m2
-        else:
-            anet_plot = -anet_leaf
-            anet_u = -anet_leaf_u
-            anet_l = -anet_leaf_l
-
-        # Apply respiration correction if Anet < 0
-        if anet_plot < 0:
-            anet_plot += self.soil_resp_correction
-            anet_u += self.soil_resp_correction
-            anet_l += self.soil_resp_correction
-
-        elapsed_min = (current_time - self.start_time) / 60
-
-        return {
-            "elapsed_min": elapsed_min,
+        result = {
+            "elapsed_min": (current_time - self.start_time) / 60,
             "co2": co2,
-            "anet": anet_plot,
-            "anet_lower": anet_l,
-            "anet_upper": anet_u,
+            "n": len(self.co2_window),
+            "anet": None,
+            "anet_lower": None,
+            "anet_upper": None,
         }
 
+        if len(self.co2_window) == self.window_size:
+            slope, stderr = fit_slope(np.array(self.time_window),
+                                      np.array(self.co2_window), self.robust)
+
+            # CO2 falling in the box = uptake, so flip the sign
+            fluxes = [-self.calc_anet(s) + self.soil_flux_umol_s for s in
+                      (slope, slope + 1.96 * stderr, slope - 1.96 * stderr)]
+            if self.area_basis:
+                fluxes = [f / self.leaf_area_m2 for f in fluxes]
+            anet, anet_l, anet_u = fluxes
+
+            result.update(anet=anet, anet_lower=anet_l, anet_upper=anet_u)
+
+        if self.csv_file:
+            now = datetime.datetime.fromtimestamp(current_time)
+            self.csv_writer.writerow([now.isoformat(timespec="seconds"),
+                                      round(current_time - self.start_time, 1),
+                                      co2, result["anet"],
+                                      result["anet_lower"],
+                                      result["anet_upper"]])
+            self.csv_file.flush()
+
+        return result
+
     def close(self):
+        try:
+            self.sensor.set_idle()
+        except Exception:
+            pass
         self.sensor.close()
+        if self.csv_file:
+            self.csv_file.close()
 
 
-def butter_lowpass_filter(data, cutoff, fs, order=4):
-    # suppress high-frequency sensor noise but keep long-period oscillations
-    nyq = 0.5 * fs
-    normal_cutoff = cutoff / nyq
-    b, a = butter(order, normal_cutoff, btype='low', analog=False)
-    y = filtfilt(b, a, data)
+def fit_slope(time_s, co2_ppm, robust=True):
+    """
+    Linear fit of CO2 (ppm) against time (s). Returns slope (ppm s-1) and its
+    standard error. The robust (Huber) fit down-weights the occasional spike,
+    so the raw readings can be used without pre-smoothing, which would make
+    the standard error meaningless.
+    """
+    elapsed = time_s - time_s.mean()
+    X = sm.add_constant(elapsed)
+    if robust:
+        results = sm.RLM(co2_ppm, X, M=sm.robust.norms.HuberT()).fit()
+    else:
+        results = sm.OLS(co2_ppm, X).fit()
 
-    return y
-
-
-def butter_bandstop_filter(data, lowcut, highcut, fs, order=4):
-    # Apply a Butterworth band-stop filter to removes periodic oscillations
-    nyq = 0.5 * fs
-    low = lowcut / nyq
-    high = highcut / nyq
-    b, a = butter(order, [low, high], btype='bandstop')
-
-    padlen = 3 * max(len(a), len(b))
-    if len(data) <= padlen:
-        print(f"Skipping bandstop filter (order={order}) -")
-        print(f"input too short (len={len(data)} ≤ padlen={padlen})")
-        return data
-
-    return filtfilt(b, a, data)
+    return results.params[1], results.bse[1]
 
 
 def calc_volume_litres(width_cm, height_cm, length_cm):
@@ -220,3 +193,11 @@ def calc_frustum_volume_litres(top_width_cm, base_width_cm, height_cm):
     volume_litres = volume_cm3 / 1000
 
     return volume_litres
+
+
+def air_volume_litres(no_plant_pot=False):
+    """Air volume in the closed box, i.e. box minus the pot."""
+    if no_plant_pot:
+        return BOX_VOLUME_L
+    return BOX_VOLUME_L - calc_frustum_volume_litres(POT_TOP_CM, POT_BASE_CM,
+                                                     POT_HEIGHT_CM)

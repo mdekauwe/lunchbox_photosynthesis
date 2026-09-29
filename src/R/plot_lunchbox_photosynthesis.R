@@ -27,26 +27,19 @@ leaf_area <- 25.0
 soil_resp_correction <- 0.0
 ####
 
-if (no_plant_pot) {
-  lunchbox_volume <- 1.0
-  area_basis <- FALSE
-  la <- 1.0
-} else {
-  pot_volume <- calc_frustum_volume_litres(5.0, 3.4, 5.3)
-  lunchbox_volume <- 1.0 - pot_volume
-  area_basis <- TRUE
-  la <- ifelse(leaf_area > 0, leaf_area, 25.0)
-}
+# box minus pot volume, same geometry as the python scripts
+lunchbox_volume <- air_volume_litres(no_plant_pot)
+area_basis <- !no_plant_pot
+la <- if (no_plant_pot) 1.0 else if (leaf_area > 0) leaf_area else 25.0
 
 
 logger <- LunchboxLogger(port = port, baud = 9600, 
                          lunchbox_volume = lunchbox_volume, 
                          temp_c = 25.0, leaf_area_cm2 = la,
-                         window_size = 41L,       
-                         measure_interval = 1L, timeout = 1.0,
-                         smoothing = TRUE, 
-                         rolling_regression = FALSE,  
-                         area_basis = TRUE, 
+                         window_size = 24L,       # 24 x 5 s = 2 min
+                         measure_interval = 5L, timeout = 1.0,
+                         robust = TRUE,
+                         area_basis = area_basis, 
                          soil_resp_correction = soil_resp_correction)
 
 max_len <- 10 * 60 / logger$measure_interval  # 10 min window
@@ -72,13 +65,18 @@ server <- function(input, output, session) {
   )
   
   observe({
-    invalidateLater(1000, session)  # every second
+    invalidateLater(500, session)  # poll faster than the 5 s sensor rate
     
     res <- tryCatch({
       logger$read_and_update()
     }, error = function(e) NULL)
     
     if (!is.null(res)) {
+      vals$co2_latest <- res$co2
+    }
+
+    # anet is NULL until the slope window has filled
+    if (!is.null(res) && !is.null(res$anet)) {
       # Append new data
       vals$xs <- c(vals$xs, res$elapsed_min)
       vals$ys_anet <- c(vals$ys_anet, res$anet)
@@ -93,7 +91,6 @@ server <- function(input, output, session) {
         vals$ys_upper <- tail(vals$ys_upper, max_len)
       }
       
-      vals$co2_latest <- res$co2
       vals$anet_latest <- res$anet
     }
   })
