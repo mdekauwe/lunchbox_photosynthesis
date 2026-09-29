@@ -121,6 +121,7 @@ class LunchboxLogger:
             "anet": None,
             "anet_lower": None,
             "anet_upper": None,
+            "co2_mean": None,
         }
 
         if len(self.co2_window) == self.window_size:
@@ -134,7 +135,10 @@ class LunchboxLogger:
                 fluxes = [f / self.leaf_area_m2 for f in fluxes]
             anet, anet_l, anet_u = fluxes
 
-            result.update(anet=anet, anet_lower=anet_l, anet_upper=anet_u)
+            # A_net applies to the whole window, so pair it with the
+            # window's mean CO2 (for plotting A_net against CO2)
+            result.update(anet=anet, anet_lower=anet_l, anet_upper=anet_u,
+                          co2_mean=float(np.mean(self.co2_window)))
 
         if self.csv_file:
             now = datetime.datetime.fromtimestamp(current_time)

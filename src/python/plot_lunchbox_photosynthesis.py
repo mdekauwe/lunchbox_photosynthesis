@@ -18,7 +18,7 @@ from xensiv_pas_co2_sensor import MEAS_RATE_MIN_S
 def run_plotter(temp=20.0, no_plant_pot=False, leaf_area=25.0, window_size=24,
                 robust=True, soil_resp_correction=0.0, auto_ylim=False,
                 measure_interval=MEAS_RATE_MIN_S, plot_duration_min=10,
-                csv_path=None):
+                csv_path=None, low_co2=250):
 
     # Setup volume and area basis
     lunchbox_volume = air_volume_litres(no_plant_pot)
@@ -47,24 +47,43 @@ def run_plotter(temp=20.0, no_plant_pot=False, leaf_area=25.0, window_size=24,
 
     xs_co2, ys_co2 = [], []
     xs, ys_anet, ys_lower, ys_upper = [], [], [], []
+    # A_net against CO2 for the whole run (not trimmed): as the plant draws
+    # the box down this traces out its CO2 response curve
+    resp_co2, resp_anet, resp_t = [], [], []
 
-    fig, (ax_co2, ax) = plt.subplots(2, 1, figsize=(12, 7), sharex=True,
-                                     gridspec_kw={"height_ratios": [1, 2]})
+    fig = plt.figure(figsize=(15, 7))
+    gs = fig.add_gridspec(2, 2, height_ratios=[1, 2], width_ratios=[3, 2])
+    ax_co2 = fig.add_subplot(gs[0, 0])
+    ax = fig.add_subplot(gs[1, 0], sharex=ax_co2)
+    ax_resp = fig.add_subplot(gs[:, 1])
+
     ax_co2.set_ylabel("CO₂ (ppm)")
     line_co2, = ax_co2.plot([], [], lw=1.5, color="#8e44ad", marker=".")
+    ax_co2.axhline(y=low_co2, color="#c0392b", linestyle=":", lw=1)
 
     ax.set_xlabel("Elapsed Time (min)")
     units = "μmol m⁻² s⁻¹" if area_basis else "μmol box⁻¹ s⁻¹"
     ax.set_ylabel(f"Net assimilation rate ({units})", color="black")
     ax.set_xlim(0, plot_duration_min)
-    ax.set_ylim(-5, 8)
+    ax.set_ylim(-5, 15)
     ax.axhline(y=0.0, color="darkgrey", linestyle="--")
 
     line_anet, = ax.plot([], [], lw=2, color="#28b463", label="Anet")
+
+    ax_resp.set_xlabel("CO₂ (ppm)")
+    ax_resp.set_ylabel(f"Net assimilation rate ({units})")
+    ax_resp.set_title("A_net vs CO₂ (whole run)", fontsize=11)
+    ax_resp.axhline(y=0.0, color="darkgrey", linestyle="--")
+    ax_resp.axvspan(0, low_co2, color="#c0392b", alpha=0.08)
+    ax_resp.text(low_co2, 0.98, " low CO₂ ", transform=ax_resp.get_xaxis_transform(),
+                 ha="right", va="top", fontsize=9, color="#c0392b")
+    resp_line, = ax_resp.plot([], [], lw=0.8, color="lightgrey", zorder=1)
+    resp_pts = ax_resp.scatter([], [], c=[], cmap="viridis", s=18, zorder=2)
+    cbar = fig.colorbar(resp_pts, ax=ax_resp)
+    cbar.set_label("Elapsed Time (min)")
     fill_between = None
-    status_text = ax_co2.text(0.01, 0.92, "Waiting for first reading...",
-                              transform=ax_co2.transAxes, fontsize=12,
-                              verticalalignment="top", color="#8e44ad",)
+    status_text = ax_co2.set_title("Waiting for first reading...", loc="left",
+                                   fontsize=12, color="#8e44ad")
 
     def trim(x, *ys):
         # Drop points that have scrolled out of the plot window
@@ -104,8 +123,28 @@ def run_plotter(temp=20.0, no_plant_pot=False, leaf_area=25.0, window_size=24,
         trim(xs, ys_anet, ys_lower, ys_upper)
 
         ci = (data["anet_upper"] - data["anet_lower"]) / 2
-        status_text.set_text(f"CO₂ = {co2} ppm | A_net = {anet:+.2f} ± "
-                             f"{ci:.2f} {units}")
+        msg = f"CO₂ = {co2} ppm | A_net = {anet:+.2f} ± {ci:.2f} {units}"
+        if co2 < low_co2:
+            # The plant has drawn the box down far enough that CO2 is now
+            # limiting uptake, so A_net no longer reflects the plant alone
+            msg += " | CO₂ LOW: open the box to refill"
+            status_text.set_color("#c0392b")
+        else:
+            status_text.set_color("#8e44ad")
+        status_text.set_text(msg)
+
+        resp_co2.append(data["co2_mean"])
+        resp_anet.append(anet)
+        resp_t.append(elapsed_min)
+        resp_line.set_data(resp_co2, resp_anet)
+        resp_pts.set_offsets(list(zip(resp_co2, resp_anet)))
+        resp_pts.set_array(resp_t)
+        resp_pts.set_clim(resp_t[0], max(resp_t[-1], resp_t[0] + 1e-3))
+        x_lo, x_hi = min(resp_co2 + [low_co2]), max(resp_co2)
+        ax_resp.set_xlim(x_lo - 20, x_hi + 20)
+        y_lo, y_hi = min(resp_anet), max(resp_anet)
+        pad = max(0.5, 0.1 * (y_hi - y_lo))
+        ax_resp.set_ylim(min(y_lo, 0) - pad, max(y_hi, 0) + pad)
 
         if auto_ylim:
             lower, upper = min(ys_lower), max(ys_upper)
@@ -159,6 +198,8 @@ if __name__ == "__main__":
                              'from calc_soil_respiration_correction.py')
     parser.add_argument('--auto_ylim', action='store_true',
                         help='Automatically rescale y-axis?')
+    parser.add_argument('--low_co2', type=float, default=250,
+                        help='Warn when box CO₂ falls below this (ppm)')
     parser.add_argument('--save', action='store_true',
                         help='Log readings to a timestamped CSV file')
     args = parser.parse_args()
@@ -174,4 +215,4 @@ if __name__ == "__main__":
                 robust=not args.ols,
                 soil_resp_correction=args.soil_resp_correction,
                 auto_ylim=args.auto_ylim, measure_interval=args.interval,
-                csv_path=csv_path)
+                csv_path=csv_path, low_co2=args.low_co2)

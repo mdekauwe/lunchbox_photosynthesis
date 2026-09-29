@@ -33,13 +33,16 @@ Run the scripts from `src/python`.
    ```
    python calc_soil_respiration_correction.py
    ```
+   Options: `--temp`, `--window_size` (as below) and `--ignore_initial_min` (default 2, skip estimates while the box settles).
    Leave it for 10 min or so, then close the window. It prints the soil CO₂ efflux (μmol m⁻² soil s⁻¹) and the flag to use, e.g. `--soil_resp_correction 0.412`.
 
 3. **Measure the plant.** Close the box with the plant inside:
    ```
    python plot_lunchbox_photosynthesis.py --leaf_area 25 --save
    ```
-   The top panel shows CO₂, the bottom A_net with its 95% confidence band. A_net appears once the slope window has filled (about 2 min).
+   On the left, the top panel shows CO₂ and the bottom A_net with its 95% confidence band; A_net appears once the slope window has filled (about 2 min). On the right, A_net is plotted against CO₂ for the whole run, coloured by time: as the plant draws the box down this traces its CO₂ response curve.
+
+   The plant draws CO₂ down quickly (a 25 cm² leaf at 5 μmol m⁻² s⁻¹ removes about 45 ppm a minute), and A_net falls as CO₂ runs out. Below 250 ppm (`--low_co2`) the status line turns red: open the box to let it refill.
 
 ### Options for `plot_lunchbox_photosynthesis.py`
 
@@ -53,6 +56,7 @@ Run the scripts from `src/python`.
 | `--window_size` | 24 | Readings in the slope window (24 × 5 s = 2 min) |
 | `--ols` | off | Plain least squares instead of the robust fit |
 | `--auto_ylim` | off | Rescale the A_net axis automatically |
+| `--low_co2` | 250 | Warn when box CO₂ falls below this (ppm) |
 | `--save` | off | Log every reading to `lunchbox_<date>_<time>.csv` |
 
 The CSV has columns `time, elapsed_s, co2_ppm, anet, anet_lower, anet_upper` (A_net columns are empty until the window fills).
