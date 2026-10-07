@@ -88,7 +88,7 @@ with p = 101325 Pa, V = box air volume (box minus pot, 0.405 l), R = 8.314 J mol
 
 ## Troubleshooting
 
-- **`No /dev/tty.usbmodem* device found`:** the sensor isn't plugged in, or another program (e.g. the Infineon GUI, another script) has the port open.
+- **`No USB COM port found on Windows` / `No /dev/tty.usbmodem* device found`:** the sensor isn't plugged in, or another program (e.g. the Infineon GUI, another script) has the port open.
 - **CO₂ reads 0:** the sensor is idle; any of the scripts will start it.
 - **`python reset_sensor.py`** soft resets the sensor if it seems stuck.
 
@@ -117,10 +117,7 @@ Older:
 ## Notes
 
 - Box screens about ~15% of PAR (testing with licor PAR sensor).
-- The SCD40 sensor has an auto calibration on CO2, but requires it to be outside for some period of time. Ultimately this doesn't matter if logging relative change, but worth noting. I tested forcing the CO2 to a new minimum, but this doesn't really work.
-- The SCD40's temperature logger is biased high when in direct light. This is probably also the "greenhouse effect" of the plastic box. I suspect if we add a "Stevenson screen", i.e. a piece of white yogurt pot, with holes, this might be sufficient. We could test this by putting two sensors in a box and comparing readings. Currently, this does have an impact because of how we're calculating A_net. I have bought some insolation tape to test that. It is quite hard to use the isolation tape with the light sources the students have as you need to angle
-them at different angles.
+- The box warms up in direct light (the plastic acts like a greenhouse), so set `--temp` to the air temperature inside the box, not the room. A white yogurt-pot "Stevenson screen" or insulation tape might help; it is hard to use the tape with the light sources the students have, as they need to be angled in different ways.
 - Adding a fan has mixed results. It does lead to higher measured values, but it looks like you need to pulse things (turn it on and off). If it is too close to the sensor and I think it ends up blowing moisture onto the sensor as the RH goes to 100%. Going to test moving the fan a long way from the sensor and to box off the sensor.
-- Using the Xensiv PAS CO2 sensor leads to a lack of precision as it will only return the CO2 concentration as two bytes (MSB and LSB), coded as a signed 16bit integer with a resolution of 1 ppm per bit.
-- The Xensiv PAS CO2 sensor seemed to have quite strong oscillations. Before I thought this was the soil respiration that I managed to suppress quite well by parafilming the soil. A Savitzky-Golay filter and a Butterworth low-pass filter kept Anet = 0 with no plant in the box. Much of this turned out to be the old code: it polled every 1 s, but the sensor only measures every 5 s at fastest, so each value was logged ~5 times, making the CO₂ series stepwise. Now only genuinely new readings are used and the filters have been replaced by a robust linear fit. This needs testing with a plant.
-- The earlier sensor reset and calibration scripts wrote to the wrong registers, so neither worked (fixed Sep 2026).
+- Parafilming the soil suppresses soil respiration well, as an alternative to (or check on) `--soil_resp_correction`.
+- The A_net calculation (robust linear fit) still needs testing with a plant.
