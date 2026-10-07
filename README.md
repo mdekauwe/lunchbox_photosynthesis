@@ -16,8 +16,10 @@ Code for sandwich box photosynthesis logger. A plant in a small pot is sealed in
 ## Setup
 
 ```
-pip install pyserial numpy scipy statsmodels matplotlib
+pip install numpy scipy statsmodels matplotlib
 ```
+
+pyserial 3.5 is bundled in `src/python/serial`, so it does not need to be installed.
 
 Run the scripts from `src/python`.
 
