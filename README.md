@@ -21,6 +21,8 @@ pip install numpy scipy statsmodels matplotlib
 
 pyserial 3.5 is bundled in `src/python/serial`, so it does not need to be installed.
 
+If the bundled copy ever fails to import, install pyserial yourself (`pip install --user pyserial`), then delete or rename the `src/python/serial` folder and restart the QtConsole kernel (Kernel → Restart). Python will then use the installed copy.
+
 Run the scripts from `src/python`.
 
 ## Running an experiment
