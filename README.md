@@ -59,7 +59,7 @@ Run the scripts from `src/python`.
 | `--interval` | 5 | Sensor measurement interval (s), minimum 5 |
 | `--window_size` | 24 | Readings in the slope window (24 × 5 s = 2 min) |
 | `--ols` | off | Plain least squares instead of the robust fit |
-| `--auto_ylim` | off | Rescale the A_net axis automatically |
+| `--fixed_ylim` | off | Keep the A_net axis at −5 to 15 instead of rescaling it |
 | `--low_co2` | 250 | Warn when box CO₂ falls below this (ppm) |
 | `--save` | off | Log every reading to `lunchbox_<date>_<time>.csv` |
 

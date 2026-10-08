@@ -19,7 +19,7 @@ from serial_port_finder import find_usb_port
 from xensiv_pas_co2_sensor import MEAS_RATE_MIN_S
 
 def run_plotter(temp=20.0, no_plant_pot=False, leaf_area=25.0, window_size=24,
-                robust=True, soil_resp_correction=0.0, auto_ylim=False,
+                robust=True, soil_resp_correction=0.0, auto_ylim=True,
                 measure_interval=MEAS_RATE_MIN_S, plot_duration_min=10,
                 csv_path=None, low_co2=250):
 
@@ -199,8 +199,9 @@ if __name__ == "__main__":
     parser.add_argument('--soil_resp_correction', type=float, default=0.0,
                         help='Soil CO₂ efflux (μmol m⁻² soil s⁻¹, positive), '
                              'from calc_soil_respiration_correction.py')
-    parser.add_argument('--auto_ylim', action='store_true',
-                        help='Automatically rescale y-axis?')
+    parser.add_argument('--fixed_ylim', action='store_true',
+                        help='Keep the A_net axis at -5 to 15 instead of '
+                             'rescaling it')
     parser.add_argument('--low_co2', type=float, default=250,
                         help='Warn when box CO₂ falls below this (ppm)')
     parser.add_argument('--save', action='store_true',
@@ -217,5 +218,5 @@ if __name__ == "__main__":
                 leaf_area=args.leaf_area, window_size=args.window_size,
                 robust=not args.ols,
                 soil_resp_correction=args.soil_resp_correction,
-                auto_ylim=args.auto_ylim, measure_interval=args.interval,
+                auto_ylim=not args.fixed_ylim, measure_interval=args.interval,
                 csv_path=csv_path, low_co2=args.low_co2)
