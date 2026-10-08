@@ -89,6 +89,7 @@ with p = 101325 Pa, V = box air volume (box minus pot, 0.405 l), R = 8.314 J mol
 ## Troubleshooting
 
 - **`No USB COM port found on Windows` / `No /dev/tty.usbmodem* device found`:** the sensor isn't plugged in, or another program (e.g. the Infineon GUI, another script) has the port open.
+- **`Failed to import any of the following Qt binding modules` (Windows):** the plot script uses Qt for its window and falls back to Tk if Qt isn't available. If no window appears, run `pip install pyqt5`, then restart the QtConsole kernel (Kernel → Restart).
 - **CO₂ reads 0:** the sensor is idle; any of the scripts will start it.
 - **`python reset_sensor.py`** soft resets the sensor if it seems stuck.
 
