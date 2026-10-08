@@ -4,8 +4,11 @@ import sys
 import datetime
 import matplotlib
 if sys.platform.startswith("win"):
+    # matplotlib.use() doesn't import the backend, so import it here to
+    # find out whether any Qt binding (Qt5 or Qt6) is actually available
     try:
-        matplotlib.use("Qt5Agg")
+        import matplotlib.backends.backend_qtagg
+        matplotlib.use("QtAgg")
     except ImportError:
         matplotlib.use("TkAgg")  # fallback on Windows if Qt isn't available
 
