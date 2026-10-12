@@ -69,7 +69,7 @@ The CSV has columns `time, elapsed_s, co2_ppm, anet, anet_lower, anet_upper` (A_
 
 ## Estimating leaf area
 
-`leaf_area_calculator.xlsx` does the sums below: open the sheet for your plant (Arabidopsis, Wheat or Maize), type the measurements into the yellow cells, and copy the command it gives you.
+The leaf area calculator spreadsheet given out in the lab does the sums below: open the sheet for your plant (Arabidopsis, Wheat or Maize), type the measurements into the yellow cells, and copy the command it gives you.
 
 A_net is divided by leaf area, so the leaf area matters as much as the CO₂ slope: halve it and A_net doubles. For rosettes we use **projected leaf area**, the area of leaf you see looking straight down on the plant. For a rosette lit from above this is roughly the leaf area that is catching light, and because it misses leaves hidden underneath others or tilted up, it errs on the low side.
 
@@ -173,8 +173,6 @@ Older:
 - `calc_Anet.py`, `co2_monitor.py`, `plot_Anet.py`: for the earlier SCD40 sensor (need `qwiic_scd4x`).
 - `xensiv_pas_co2_gui_csv_to_plot.py`, `plot_realtime_Anet_from_csv.py`: plot CSVs saved by Infineon's own GUI (`PAS_CO2_datalog_*.csv`).
 - `old_sensiv_pas_plotting_script.py`: the logger before it was split into logger and plotter.
-
-`leaf_area_calculator.xlsx`: spreadsheet for students to work out leaf area from leaf measurements.
 
 `src/R`:
 
