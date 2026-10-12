@@ -42,8 +42,9 @@ Run the scripts from `src/python`.
 
 3. **Measure the plant.** Close the box with the plant inside:
    ```
-   python plot_lunchbox_photosynthesis.py --leaf_area 15 --save
+   python plot_lunchbox_photosynthesis.py --plant wheat --leaf_area 12 --save
    ```
+   `--plant` (`arabidopsis`, `wheat` or `maize`) picks a typical leaf area for that plant if you don't give `--leaf_area`; better still, measure your plant (see [Estimating leaf area](#estimating-leaf-area)).
    On the left, the top panel shows CO₂ and the bottom A_net with its 95% confidence band; A_net appears once the slope window has filled (about 2 min). On the right, A_net is plotted against CO₂ for the whole run, coloured by time: as the plant draws the box down this traces its CO₂ response curve.
 
    The plant draws CO₂ down quickly (15 cm² of leaf at 5 μmol m⁻² s⁻¹ removes about 25 ppm a minute), and A_net falls as CO₂ runs out. Below 250 ppm (`--low_co2`) the status line turns red: open the box to let it refill.
@@ -52,7 +53,8 @@ Run the scripts from `src/python`.
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--leaf_area` | 15 | Leaf area (cm²), see [Estimating leaf area](#estimating-leaf-area); A_net is per m² of leaf |
+| `--plant` | arabidopsis | Plant type; sets the leaf area if `--leaf_area` isn't given (arabidopsis 15, wheat 12, maize 13 cm²) |
+| `--leaf_area` | from `--plant` | Leaf area (cm²), see [Estimating leaf area](#estimating-leaf-area); A_net is per m² of leaf |
 | `--temp` | 20 | Air temperature in the box (°C) |
 | `--soil_resp_correction` | 0 (off) | Soil CO₂ efflux from step 2 (μmol m⁻² soil s⁻¹, positive) |
 | `--no_plant_pot` | off | Empty box: no pot volume, A_net per box instead of per m² |
@@ -66,6 +68,8 @@ Run the scripts from `src/python`.
 The CSV has columns `time, elapsed_s, co2_ppm, anet, anet_lower, anet_upper` (A_net columns are empty until the window fills).
 
 ## Estimating leaf area
+
+`leaf_area_calculator.xlsx` does the sums below: open the sheet for your plant (Arabidopsis, Wheat or Maize), type the measurements into the yellow cells, and copy the command it gives you.
 
 A_net is divided by leaf area, so the leaf area matters as much as the CO₂ slope: halve it and A_net doubles. For rosettes we use **projected leaf area**, the area of leaf you see looking straight down on the plant. For a rosette lit from above this is roughly the leaf area that is catching light, and because it misses leaves hidden underneath others or tilted up, it errs on the low side.
 
@@ -169,6 +173,8 @@ Older:
 - `calc_Anet.py`, `co2_monitor.py`, `plot_Anet.py`: for the earlier SCD40 sensor (need `qwiic_scd4x`).
 - `xensiv_pas_co2_gui_csv_to_plot.py`, `plot_realtime_Anet_from_csv.py`: plot CSVs saved by Infineon's own GUI (`PAS_CO2_datalog_*.csv`).
 - `old_sensiv_pas_plotting_script.py`: the logger before it was split into logger and plotter.
+
+`leaf_area_calculator.xlsx`: spreadsheet for students to work out leaf area from leaf measurements.
 
 `src/R`:
 

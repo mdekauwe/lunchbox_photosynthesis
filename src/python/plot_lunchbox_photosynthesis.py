@@ -18,6 +18,11 @@ from lunchbox_logger import LunchboxLogger, air_volume_litres
 from serial_port_finder import find_usb_port
 from xensiv_pas_co2_sensor import MEAS_RATE_MIN_S
 
+# Typical leaf area (cm²) for each plant, used when --leaf_area isn't given.
+# Arabidopsis is projected area, the grasses one-sided blade area (see README)
+PLANT_LEAF_AREA_CM2 = {"arabidopsis": 15.0, "wheat": 12.0, "maize": 13.0}
+DEFAULT_PLANT = "arabidopsis"
+
 def run_plotter(temp=20.0, no_plant_pot=False, leaf_area=15.0, window_size=24,
                 robust=True, soil_resp_correction=0.0, auto_ylim=True,
                 measure_interval=MEAS_RATE_MIN_S, plot_duration_min=10,
@@ -187,8 +192,12 @@ if __name__ == "__main__":
                          default=20.)
     parser.add_argument('--no_plant_pot', action='store_true',
                         help='Empty box: no pot volume, flux per box')
-    parser.add_argument('--leaf_area', type=float, default=15,
-                        help='Leaf area in cm² (see README)')
+    parser.add_argument('--plant', choices=sorted(PLANT_LEAF_AREA_CM2),
+                        default=DEFAULT_PLANT,
+                        help='Plant type, sets a typical leaf area')
+    parser.add_argument('--leaf_area', type=float,
+                        help='Leaf area in cm² (see README), overrides the '
+                             '--plant default')
     parser.add_argument('--interval', type=int, default=MEAS_RATE_MIN_S,
                         help='Sensor measurement interval in s (min 5)')
     parser.add_argument('--window_size', type=int, default=24,
@@ -208,6 +217,12 @@ if __name__ == "__main__":
                         help='Log readings to a timestamped CSV file')
     args = parser.parse_args()
 
+    leaf_area = args.leaf_area
+    if leaf_area is None:
+        leaf_area = PLANT_LEAF_AREA_CM2[args.plant]
+        print(f"Using typical {args.plant} leaf area, {leaf_area:g} cm² "
+              f"(set --leaf_area for your plant)")
+
     csv_path = None
     if args.save:
         stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -215,7 +230,7 @@ if __name__ == "__main__":
         print(f"Saving to {csv_path}")
 
     run_plotter(temp=args.temp, no_plant_pot=args.no_plant_pot,
-                leaf_area=args.leaf_area, window_size=args.window_size,
+                leaf_area=leaf_area, window_size=args.window_size,
                 robust=not args.ols,
                 soil_resp_correction=args.soil_resp_correction,
                 auto_ylim=not args.fixed_ylim, measure_interval=args.interval,
