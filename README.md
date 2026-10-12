@@ -42,9 +42,9 @@ Run the scripts from `src/python`.
 
 3. **Measure the plant.** Close the box with the plant inside:
    ```
-   python plot_lunchbox_photosynthesis.py --plant wheat --leaf_area 12 --save
+   python plot_lunchbox_photosynthesis.py --leaf_area 12 --save
    ```
-   `--plant` (`arabidopsis`, `wheat` or `maize`) picks a typical leaf area for that plant if you don't give `--leaf_area`; better still, measure your plant (see [Estimating leaf area](#estimating-leaf-area)).
+   where 12 is your plant's leaf area in cm² (see [Estimating leaf area](#estimating-leaf-area)). If you haven't measured it, use `--plant` (`arabidopsis`, `wheat` or `maize`) instead of `--leaf_area` to get a typical leaf area for that plant, e.g. `--plant wheat`.
    On the left, the top panel shows CO₂ and the bottom A_net with its 95% confidence band; A_net appears once the slope window has filled (about 2 min). On the right, A_net is plotted against CO₂ for the whole run, coloured by time: as the plant draws the box down this traces its CO₂ response curve.
 
    The plant draws CO₂ down quickly (15 cm² of leaf at 5 μmol m⁻² s⁻¹ removes about 25 ppm a minute), and A_net falls as CO₂ runs out. Below 250 ppm (`--low_co2`) the status line turns red: open the box to let it refill.
