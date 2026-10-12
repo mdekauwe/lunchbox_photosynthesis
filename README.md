@@ -52,7 +52,7 @@ Run the scripts from `src/python`.
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--leaf_area` | 15 | Projected leaf area (cm²), see [Estimating leaf area](#estimating-leaf-area); A_net is per m² of leaf |
+| `--leaf_area` | 15 | Leaf area (cm²), see [Estimating leaf area](#estimating-leaf-area); A_net is per m² of leaf |
 | `--temp` | 20 | Air temperature in the box (°C) |
 | `--soil_resp_correction` | 0 (off) | Soil CO₂ efflux from step 2 (μmol m⁻² soil s⁻¹, positive) |
 | `--no_plant_pot` | off | Empty box: no pot volume, A_net per box instead of per m² |
@@ -67,7 +67,7 @@ The CSV has columns `time, elapsed_s, co2_ppm, anet, anet_lower, anet_upper` (A_
 
 ## Estimating leaf area
 
-A_net is divided by leaf area, so the leaf area matters as much as the CO₂ slope: halve it and A_net doubles. We use **projected leaf area**, the area of leaf you see looking straight down on the plant. For a rosette lit from above this is roughly the leaf area that is catching light, and because it misses leaves hidden underneath others or tilted up, it errs on the low side.
+A_net is divided by leaf area, so the leaf area matters as much as the CO₂ slope: halve it and A_net doubles. For rosettes we use **projected leaf area**, the area of leaf you see looking straight down on the plant. For a rosette lit from above this is roughly the leaf area that is catching light, and because it misses leaves hidden underneath others or tilted up, it errs on the low side.
 
 **Quick count.** For each leaf, measure:
 
@@ -95,6 +95,35 @@ projected ≈ 0.5 × 30.1      ≈ 15 cm²
 ```
 
 **From a photo (better).** Photograph the plant from directly above with a ruler or a square of known size at the height of the pot rim (the 4 × 4 cm pot top works). In ImageJ, set the scale from the ruler, threshold the green, and measure the area. For the plant above this gave about 18 cm², in line with the quick count.
+
+### Grasses
+
+Upright grass blades show almost nothing from above, so for grasses use the **one-sided area of each blade** instead (for upright blades that barely shade each other this is close to the area catching light).
+
+**Quick count.** Measure every blade separately, work out the area of each, and **add them up** (A_net needs the plant's total leaf area, not the average blade):
+
+- **length (L):** along the blade, from where it leaves the stem (the collar, where the sheath ends) to the tip. This is not the height of the plant, which also includes the stem.
+- **width (W):** across the widest part of the blade.
+
+```
+blade area (cm²) ≈ 0.75 × L × W          for each blade
+leaf area        = sum over all blades
+```
+
+- **0.75** is the shape factor for grass blades: a strap-shaped blade only tapers near the tip, so it fills more of its L × W rectangle than a rounded leaf does.
+- No 0.5 overlap factor, as the blades barely overlap.
+
+For example, a seedling with two blades, 15 × 1.1 cm and 12 × 0.8 cm:
+
+```
+blade 1   0.75 × 15 × 1.1 = 12.4
+blade 2   0.75 × 12 × 0.8 =  7.2
+total                       19.6 cm²   → --leaf_area 20
+```
+
+**From a photo (better).** Lay each blade flat on paper next to a ruler without cutting it off, hold it down with a clear plastic sheet, photograph from directly above and measure in ImageJ as above.
+
+In the box, arrange the blades so they face the lamp and don't fold back on themselves or press against the walls or sensor. A folded or shaded blade isn't photosynthesising fully, so the measured leaf area will be too high and A_net too low.
 
 ## How A_net is calculated
 

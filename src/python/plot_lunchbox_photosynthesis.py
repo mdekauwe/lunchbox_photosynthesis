@@ -188,7 +188,7 @@ if __name__ == "__main__":
     parser.add_argument('--no_plant_pot', action='store_true',
                         help='Empty box: no pot volume, flux per box')
     parser.add_argument('--leaf_area', type=float, default=15,
-                        help='Projected leaf area in cm²')
+                        help='Leaf area in cm² (see README)')
     parser.add_argument('--interval', type=int, default=MEAS_RATE_MIN_S,
                         help='Sensor measurement interval in s (min 5)')
     parser.add_argument('--window_size', type=int, default=24,
