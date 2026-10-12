@@ -11,7 +11,7 @@ Code for sandwich box photosynthesis logger. A plant in a small pot is sealed in
 ## Hardware
 
 - Infineon XENSIV PAS CO₂ sensor on its USB evaluation board, talking UART at 9600 baud. The port is found automatically (`/dev/tty.usbmodem*` on macOS, the first USB COM port on Windows).
-- A 0.5 l lunchbox and a square pot, 5.0 cm top × 3.4 cm base × 5.3 cm deep. If you change the box or pot, edit the constants at the top of `src/python/lunchbox_logger.py` (`BOX_VOLUME_L`, `POT_TOP_CM`, `POT_BASE_CM`, `POT_HEIGHT_CM`).
+- A 0.5 l lunchbox and a square pot, 4.0 cm top × 2.5 cm base × 5.4 cm deep. If you change the box or pot, edit the constants at the top of `src/python/lunchbox_logger.py` (`BOX_VOLUME_L`, `POT_TOP_CM`, `POT_BASE_CM`, `POT_HEIGHT_CM`).
 
 ## Setup
 
@@ -42,17 +42,17 @@ Run the scripts from `src/python`.
 
 3. **Measure the plant.** Close the box with the plant inside:
    ```
-   python plot_lunchbox_photosynthesis.py --leaf_area 25 --save
+   python plot_lunchbox_photosynthesis.py --leaf_area 15 --save
    ```
    On the left, the top panel shows CO₂ and the bottom A_net with its 95% confidence band; A_net appears once the slope window has filled (about 2 min). On the right, A_net is plotted against CO₂ for the whole run, coloured by time: as the plant draws the box down this traces its CO₂ response curve.
 
-   The plant draws CO₂ down quickly (a 25 cm² leaf at 5 μmol m⁻² s⁻¹ removes about 45 ppm a minute), and A_net falls as CO₂ runs out. Below 250 ppm (`--low_co2`) the status line turns red: open the box to let it refill.
+   The plant draws CO₂ down quickly (15 cm² of leaf at 5 μmol m⁻² s⁻¹ removes about 25 ppm a minute), and A_net falls as CO₂ runs out. Below 250 ppm (`--low_co2`) the status line turns red: open the box to let it refill.
 
 ### Options for `plot_lunchbox_photosynthesis.py`
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--leaf_area` | 25 | Leaf area (cm²); A_net is per m² of leaf |
+| `--leaf_area` | 15 | Projected leaf area (cm²), see [Estimating leaf area](#estimating-leaf-area); A_net is per m² of leaf |
 | `--temp` | 20 | Air temperature in the box (°C) |
 | `--soil_resp_correction` | 0 (off) | Soil CO₂ efflux from step 2 (μmol m⁻² soil s⁻¹, positive) |
 | `--no_plant_pot` | off | Empty box: no pot volume, A_net per box instead of per m² |
@@ -65,6 +65,37 @@ Run the scripts from `src/python`.
 
 The CSV has columns `time, elapsed_s, co2_ppm, anet, anet_lower, anet_upper` (A_net columns are empty until the window fills).
 
+## Estimating leaf area
+
+A_net is divided by leaf area, so the leaf area matters as much as the CO₂ slope: halve it and A_net doubles. We use **projected leaf area**, the area of leaf you see looking straight down on the plant. For a rosette lit from above this is roughly the leaf area that is catching light, and because it misses leaves hidden underneath others or tilted up, it errs on the low side.
+
+**Quick count.** For each leaf, measure:
+
+- **length (L):** from the tip of the leaf blade to where the blade meets the stalk (leave the stalk out);
+- **width (W):** across the widest part of the blade, at right angles to the length.
+
+Then
+
+```
+leaf area (cm²) ≈ 0.7 × L × W            for each leaf
+projected area  ≈ 0.5 × (sum over all leaves)
+```
+
+- **0.7** is a leaf shape factor: the fraction of the L × W rectangle the leaf actually fills. An ellipse fills π/4 ≈ 0.79 of its rectangle; rounded and spoon-shaped leaves fill a bit less, so 0.7 is a reasonable all-round value.
+- **0.5** allows for overlap and tilt: in a rosette the inner leaves sit under the outer ones and most leaves angle upwards, so only about half of the total leaf area shows from above.
+
+You don't need to measure every leaf. Group them by size, measure one of each, and multiply by how many there are. For example, a plant with 16 leaves, 8 large (2.5 × 1.6 cm), 4 medium (1.5 × 1.5 cm) and 4 tiny (about 0.7 × 0.7 cm):
+
+```
+large   8 × 0.7 × 2.5 × 1.6 = 22.4
+medium  4 × 0.7 × 1.5 × 1.5 =  6.3
+tiny    4 × 0.7 × 0.7 × 0.7 =  1.4
+total                         30.1 cm²
+projected ≈ 0.5 × 30.1      ≈ 15 cm²
+```
+
+**From a photo (better).** Photograph the plant from directly above with a ruler or a square of known size at the height of the pot rim (the 4 × 4 cm pot top works). In ImageJ, set the scale from the ruler, threshold the green, and measure the area. For the plant above this gave about 18 cm², in line with the quick count.
+
 ## How A_net is calculated
 
 Every 5 s the sensor gives a new CO₂ reading. A robust (Huber) linear fit over the last 24 readings gives the rate of change, `dCO₂/dt` (ppm s⁻¹), and its standard error. The ideal gas law turns that into a flux:
@@ -73,14 +104,14 @@ Every 5 s the sensor gives a new CO₂ reading. A robust (Huber) linear fit over
 flux (μmol s⁻¹) = dCO₂/dt × p × V / (R × T)
 ```
 
-with p = 101325 Pa, V = box air volume (box minus pot, 0.405 l), R = 8.314 J mol⁻¹ K⁻¹ and T from `--temp`.
+with p = 101325 Pa, V = box air volume (box minus pot, 0.442 l), R = 8.314 J mol⁻¹ K⁻¹ and T from `--temp`.
 
 - **Sign:** carbon uptake is positive. CO₂ falling in the box gives positive A_net; CO₂ rising (dark, respiration) gives negative A_net.
 - **Soil respiration:** soil adds CO₂ all the time, so the measured uptake is leaf uptake minus soil efflux. The correction is scaled from soil area (the pot top) to the box and added back to every reading, then A_net is divided by leaf area.
 
 ## Sensor behaviour worth knowing
 
-- The sensor measures every 5 s at fastest (hardware limit). Readings are integers (1 ppm resolution) with noise of roughly ±10 ppm, so a 2 min window resolves A_net to about ±0.2 μmol m⁻² s⁻¹ for a 25 cm² leaf.
+- The sensor measures every 5 s at fastest (hardware limit). Readings are integers (1 ppm resolution) with noise of roughly ±10 ppm, so a 2 min window resolves A_net to about ±0.35 μmol m⁻² s⁻¹ for 15 cm² of leaf.
 - All settings except a saved calibration are lost on power off. At power up the sensor is idle, measuring every 60 s, with automatic baseline correction (ABOC) on. The scripts configure it each time: 5 s rate, pressure reference, ABOC off (ABOC assumes it regularly sees fresh air, and would shift the offset mid-experiment).
 - The first few readings after a reset jump around; the logger discards the first 4.
 - After a calibration, readings swing wildly for a few samples (even below zero) while the new offset settles. The calibration script waits these out.

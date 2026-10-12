@@ -9,9 +9,9 @@ from xensiv_pas_co2_sensor import CO2Sensor, MEAS_RATE_MIN_S
 
 # Box and pot geometry
 BOX_VOLUME_L = 0.5
-POT_TOP_CM = 5.0     # square pot, top edge
-POT_BASE_CM = 3.4    # square pot, base edge
-POT_HEIGHT_CM = 5.3
+POT_TOP_CM = 4.0     # square pot, top edge
+POT_BASE_CM = 2.5    # square pot, base edge
+POT_HEIGHT_CM = 5.4
 PRESSURE_PA = 101325.0
 RGAS = 8.314  # J K-1 mol-1
 

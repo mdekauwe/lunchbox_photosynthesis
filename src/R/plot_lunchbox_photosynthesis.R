@@ -23,14 +23,14 @@ calc_frustum_volume_litres <- function(top_width_cm, base_width_cm, height_cm) {
 
 ### equivalent of cmd line
 no_plant_pot <- FALSE   
-leaf_area <- 25.0       
+leaf_area <- 15.0       
 soil_resp_correction <- 0.0
 ####
 
 # box minus pot volume, same geometry as the python scripts
 lunchbox_volume <- air_volume_litres(no_plant_pot)
 area_basis <- !no_plant_pot
-la <- if (no_plant_pot) 1.0 else if (leaf_area > 0) leaf_area else 25.0
+la <- if (no_plant_pot) 1.0 else if (leaf_area > 0) leaf_area else 15.0
 
 
 logger <- LunchboxLogger(port = port, baud = 9600, 

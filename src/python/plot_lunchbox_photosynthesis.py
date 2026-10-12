@@ -18,7 +18,7 @@ from lunchbox_logger import LunchboxLogger, air_volume_litres
 from serial_port_finder import find_usb_port
 from xensiv_pas_co2_sensor import MEAS_RATE_MIN_S
 
-def run_plotter(temp=20.0, no_plant_pot=False, leaf_area=25.0, window_size=24,
+def run_plotter(temp=20.0, no_plant_pot=False, leaf_area=15.0, window_size=24,
                 robust=True, soil_resp_correction=0.0, auto_ylim=True,
                 measure_interval=MEAS_RATE_MIN_S, plot_duration_min=10,
                 csv_path=None, low_co2=250):
@@ -30,7 +30,7 @@ def run_plotter(temp=20.0, no_plant_pot=False, leaf_area=25.0, window_size=24,
         la = 1.0
     else:
         area_basis = True
-        la = leaf_area if leaf_area > 0 else 25.0
+        la = leaf_area if leaf_area > 0 else 15.0
 
     port = find_usb_port()
     baud = 9600
@@ -187,8 +187,8 @@ if __name__ == "__main__":
                          default=20.)
     parser.add_argument('--no_plant_pot', action='store_true',
                         help='Empty box: no pot volume, flux per box')
-    parser.add_argument('--leaf_area', type=float, default=25,
-                        help='Leaf area in cm²')
+    parser.add_argument('--leaf_area', type=float, default=15,
+                        help='Projected leaf area in cm²')
     parser.add_argument('--interval', type=int, default=MEAS_RATE_MIN_S,
                         help='Sensor measurement interval in s (min 5)')
     parser.add_argument('--window_size', type=int, default=24,
