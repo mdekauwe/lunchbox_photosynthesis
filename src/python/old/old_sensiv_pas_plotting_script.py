@@ -16,6 +16,8 @@ import serial
 from scipy.signal import savgol_filter, butter, filtfilt, medfilt
 import statsmodels.api as sm
 import pandas as pd
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from serial_port_finder import find_usb_port
 
 from xensiv_pas_co2_sensor import CO2Sensor

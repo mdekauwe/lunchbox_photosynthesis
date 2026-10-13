@@ -168,7 +168,7 @@ with p = 101325 Pa, V = box air volume (box minus pot, 0.442 l), R = 8.314 J mol
 - `serial_port_finder.py`: finds the USB port.
 - `co2_test.py`, `co2_xensiv_checker_plot.py`: quick CO₂-only plots for checking the sensor.
 
-Older:
+`src/python/old`, superseded scripts kept for reference:
 
 - `calc_Anet.py`, `co2_monitor.py`, `plot_Anet.py`: for the earlier SCD40 sensor (need `qwiic_scd4x`).
 - `xensiv_pas_co2_gui_csv_to_plot.py`, `plot_realtime_Anet_from_csv.py`: plot CSVs saved by Infineon's own GUI (`PAS_CO2_datalog_*.csv`).
